@@ -99,3 +99,51 @@ describe('buildKeyboard', () => {
     expect(keyboard.style.width).not.toBe('');
   });
 });
+
+// ── Overlay / touchstart interaction ──────────────────────────────────────────
+describe('touchstart overlay guard', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div class="start-overlay" id="startOverlay">
+        <button id="startBtn">Tap to Play</button>
+      </div>
+      <div id="keyboardScroll">
+        <div id="keyboard"><div id="blackKeysLayer"></div></div>
+      </div>
+    `;
+    vi.spyOn(HTMLElement.prototype, 'scrollLeft', 'set').mockImplementation(() => {});
+    buildKeyboard();
+  });
+
+  it('does not call preventDefault while overlay is visible', () => {
+    // Overlay is present and does NOT have .hidden — button tap must not be swallowed
+    const event = new TouchEvent('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 0, clientY: 0 }],
+    });
+    const spy = vi.spyOn(event, 'preventDefault');
+    document.dispatchEvent(event);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('calls preventDefault on key touch once overlay is hidden', () => {
+    document.getElementById('startOverlay').classList.add('hidden');
+
+    // Make a key report a hit at (0,0)
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(
+      { left: -10, right: 10, top: -10, bottom: 10 }
+    );
+
+    const event = new TouchEvent('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 0, clientY: 0 }],
+    });
+    const spy = vi.spyOn(event, 'preventDefault');
+    document.dispatchEvent(event);
+    expect(spy).toHaveBeenCalled();
+  });
+});
