@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { noteName, isBlack, buildKeyboard } from './keyboard.js';
 
 // ── noteName ───────────────────────────────────────────────────────────────────
@@ -97,5 +99,30 @@ describe('buildKeyboard', () => {
   it('sets keyboard width based on WHITE_W=47 and 29 white keys', () => {
     const keyboard = document.getElementById('keyboard');
     expect(keyboard.style.width).toBe('1387px'); // 29 * 47 + 24
+  });
+});
+
+// ── Responsive CSS layout ───────────────────────────────────────────────────────
+describe('responsive layout (style.css)', () => {
+  let css;
+  beforeEach(() => {
+    css = readFileSync(resolve(__dirname, '../style.css'), 'utf8');
+  });
+
+  it('keyboard-scroll uses flex:1 (no fixed height)', () => {
+    expect(css).toMatch(/\.keyboard-scroll\s*\{[^}]*flex:\s*1/);
+    expect(css).not.toMatch(/\.keyboard-scroll\s*\{[^}]*height:\s*\d/);
+  });
+
+  it('rail has compact height of 60px', () => {
+    expect(css).toMatch(/\.rail\s*\{[^}]*height:\s*60px/);
+  });
+
+  it('landscape media query shrinks header padding', () => {
+    expect(css).toMatch(/@media\s*\(orientation:\s*landscape\)[^{]*\{[^}]*\.header[^}]*padding/s);
+  });
+
+  it('landscape media query shrinks rail height', () => {
+    expect(css).toMatch(/@media\s*\(orientation:\s*landscape\)[^{]*\{[^}]*\.rail[^}]*height/s);
   });
 });
