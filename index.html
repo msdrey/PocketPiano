@@ -34,41 +34,6 @@
 
     body { display: flex; flex-direction: column; }
 
-    /* ── Start overlay ── */
-    .start-overlay {
-      position: fixed; inset: 0;
-      background: var(--bg);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 999; gap: 28px;
-    }
-    .hidden { display: none !important; }
-
-    .overlay-logo {
-      font-size: 36px; font-weight: 700;
-      color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .overlay-logo span { color: var(--cream); font-weight: 400; }
-
-    .start-btn {
-      border: 1px solid var(--gold);
-      background: transparent;
-      color: var(--gold);
-      font-family: 'Courier Prime', monospace;
-      font-size: 13px; letter-spacing: 0.25em;
-      text-transform: uppercase;
-      padding: 16px 40px; border-radius: 2px; cursor: pointer;
-      -webkit-appearance: none;
-      transition: background 0.15s, color 0.15s;
-    }
-    .start-btn:active { background: var(--gold); color: var(--bg); }
-
-    .overlay-sub {
-      font-family: 'Courier Prime', monospace;
-      font-size: 10px; color: var(--gold);
-      opacity: 0.4; letter-spacing: 0.2em;
-    }
-
     /* ── Header ── */
     .header {
       flex-shrink: 0;
@@ -181,12 +146,6 @@
 </head>
 <body>
 
-<div class="start-overlay" id="startOverlay">
-  <div class="overlay-logo">Grand<span>Keys</span></div>
-  <button class="start-btn" id="startBtn">Tap to Play</button>
-  <div class="overlay-sub">tap to enable audio</div>
-</div>
-
 <div class="header">
   <div class="logo">Grand<span>Keys</span></div>
 </div>
@@ -205,22 +164,7 @@
 <div class="note-display" id="noteDisplay"></div>
 
 <script>
-// ── Audio unlock (iOS Safari requires user gesture before AudioContext works) ──
-let ctx = null;
-
-document.getElementById('startBtn').addEventListener('click', async () => {
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  await ctx.resume();
-
-  // Unlock iOS by playing a silent buffer on the first gesture
-  const buf = ctx.createBuffer(1, 1, 22050);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  src.start(0);
-
-  document.getElementById('startOverlay').classList.add('hidden');
-});
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
 // ── Synthesis ─────────────────────────────────────────────────────────────────
 const activeNodes = {};
