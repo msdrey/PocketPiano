@@ -71,6 +71,12 @@ body { display: flex; flex-direction: column; }
 }
 .logo span { color: var(--cream); font-weight: 400; }
 
+.pr-badge {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px; color: var(--gold);
+  opacity: 0.4; letter-spacing: 0.1em;
+}
+
 .hint {
   flex-shrink: 0; text-align: center;
   font-family: 'Courier Prime', monospace;
