@@ -256,10 +256,14 @@ function stopNote(midi) {
   if (!activeNodes[midi]) return;
   const { osc1, osc2, osc3, master } = activeNodes[midi];
   const now = ctx.currentTime;
-  master.gain.cancelScheduledValues(now);
-  master.gain.setValueAtTime(master.gain.value, now);
-  master.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 500);
+  if (master.gain.cancelAndHoldAtTime) {
+    master.gain.cancelAndHoldAtTime(now);
+  } else {
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+  }
+  master.gain.linearRampToValueAtTime(0, now + 0.3);
+  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 400);
   delete activeNodes[midi];
 }
 
