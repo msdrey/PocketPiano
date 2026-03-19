@@ -62,17 +62,6 @@ export function buildKeyboard() {
   requestAnimationFrame(syncSlider);
 }
 
-// ── Note display ───────────────────────────────────────────────────────────────
-const noteDisplay = document.getElementById('noteDisplay');
-let noteTimeout;
-function showNote(name) {
-  if (!noteDisplay) return;
-  noteDisplay.textContent = name;
-  noteDisplay.classList.add('visible');
-  clearTimeout(noteTimeout);
-  noteTimeout = setTimeout(() => noteDisplay.classList.remove('visible'), 900);
-}
-
 // ── Press / release ────────────────────────────────────────────────────────────
 const pressed = new Set();
 
@@ -80,7 +69,6 @@ function press(midi) {
   if (pressed.has(midi)) return;
   pressed.add(midi);
   playNote(midi);
-  showNote(noteName(midi));
   document.querySelector(`[data-midi="${midi}"]`)?.classList.add('pressed');
 }
 
