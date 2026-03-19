@@ -20,6 +20,7 @@
 
 <div class="header">
   <div class="logo">Pocket<span>Piano</span></div>
+  <div class="pr-badge" id="prBadge"></div>
 </div>
 <div class="hint">scroll to explore all keys</div>
 
@@ -38,6 +39,14 @@
   import { buildKeyboard } from './keyboard.js';
 
   buildKeyboard();
+
+  fetch('https://api.github.com/repos/msdrey/PocketPiano/pulls?state=closed&sort=updated&direction=desc&per_page=10')
+    .then(r => r.json())
+    .then(prs => {
+      const merged = prs.find(p => p.merged_at);
+      if (merged) document.getElementById('prBadge').textContent = '#' + merged.number;
+    })
+    .catch(() => {});
 
   document.getElementById('startBtn').addEventListener('click', () => {
     initAudio().then(() => {
