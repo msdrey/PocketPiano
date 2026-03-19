@@ -47,13 +47,6 @@
     }
     .logo span { color: var(--cream); font-weight: 400; }
 
-    .hint {
-      flex-shrink: 0; text-align: center;
-      font-family: 'Courier Prime', monospace;
-      font-size: 10px; color: var(--gold);
-      opacity: 0.35; letter-spacing: 0.2em; padding-bottom: 10px;
-    }
-
     /* ── Piano wrapper ── */
     .piano-wrapper {
       flex: 1; overflow: hidden;
@@ -72,7 +65,8 @@
     }
 
     .keyboard-scroll {
-      flex: 1; overflow-x: auto; overflow-y: hidden;
+      flex: none; height: 170px;
+      overflow-x: auto; overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       background: linear-gradient(180deg, #1a1612 0%, #100e0b 100%);
@@ -126,8 +120,28 @@
     }
 
     .rail {
-      flex-shrink: 0; height: 20px;
+      flex-shrink: 0; height: 48px;
       background: linear-gradient(180deg, #1a1410, #0a0806);
+      display: flex; align-items: center; padding: 0 20px;
+    }
+
+    .scroll-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 3px;
+      background: rgba(200,169,110,0.2);
+      border-radius: 2px; outline: none; cursor: pointer;
+      touch-action: auto;
+    }
+    .scroll-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); cursor: pointer;
+      box-shadow: 0 0 8px rgba(200,169,110,0.5);
+    }
+    .scroll-slider::-moz-range-thumb {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: var(--gold); cursor: pointer;
+      box-shadow: 0 0 8px rgba(200,169,110,0.5);
     }
 
     .note-display {
@@ -149,7 +163,6 @@
 <div class="header">
   <div class="logo">Grand<span>Keys</span></div>
 </div>
-<div class="hint">scroll to explore all keys</div>
 
 <div class="piano-wrapper">
   <div class="lid"></div>
@@ -158,7 +171,9 @@
       <div class="black-keys-layer" id="blackKeysLayer"></div>
     </div>
   </div>
-  <div class="rail"></div>
+  <div class="rail">
+    <input type="range" class="scroll-slider" id="scrollSlider" min="0" max="1000" value="0" />
+  </div>
 </div>
 
 <div class="note-display" id="noteDisplay"></div>
@@ -213,10 +228,15 @@ function stopNote(midi) {
   if (!activeNodes[midi]) return;
   const { osc1, osc2, osc3, master } = activeNodes[midi];
   const now = ctx.currentTime;
-  master.gain.cancelScheduledValues(now);
-  master.gain.setValueAtTime(master.gain.value, now);
-  master.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 500);
+  // cancelAndHoldAtTime holds the interpolated value at exactly 'now', avoiding a discontinuity click
+  if (master.gain.cancelAndHoldAtTime) {
+    master.gain.cancelAndHoldAtTime(now);
+  } else {
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+  }
+  master.gain.linearRampToValueAtTime(0, now + 0.008);
+  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 50);
   delete activeNodes[midi];
 }
 
@@ -350,9 +370,25 @@ document.addEventListener('mouseup', () => {
   if (mouseMidi !== null) { release(mouseMidi); mouseMidi = null; }
 });
 
+// ── Scroll slider ──────────────────────────────────────────────────────────────
+const scrollEl = document.getElementById('keyboardScroll');
+const slider = document.getElementById('scrollSlider');
+
+function syncSlider() {
+  const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+  if (max > 0) slider.value = Math.round((scrollEl.scrollLeft / max) * 1000);
+}
+
+scrollEl.addEventListener('scroll', syncSlider, { passive: true });
+slider.addEventListener('input', () => {
+  const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+  scrollEl.scrollLeft = (slider.value / 1000) * max;
+});
+
 // ── Initial scroll position (C3) ──────────────────────────────────────────────
 window.addEventListener('load', () => {
-  document.getElementById('keyboardScroll').scrollLeft = 7 * WHITE_W - 20;
+  scrollEl.scrollLeft = 7 * WHITE_W - 20;
+  requestAnimationFrame(syncSlider);
 });
 </script>
 </body>
