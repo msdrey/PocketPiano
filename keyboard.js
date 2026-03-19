@@ -83,9 +83,13 @@ const touchMap = {};
 document.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
     const m = keyAt(t.clientX, t.clientY);
-    if (m !== null) { touchMap[t.identifier] = m; press(m); }
+    if (m !== null) {
+      e.preventDefault(); // blocks iOS magnifier and double-tap zoom on key touches
+      touchMap[t.identifier] = m;
+      press(m);
+    }
   }
-}, { passive: true });
+}, { passive: false });
 
 document.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) {
