@@ -40,9 +40,15 @@ function killNodes(midi) {
     if (!map[midi]) continue;
     const { oscs, master } = map[midi];
     const t = ctx.currentTime;
-    master.gain.cancelScheduledValues(t);
-    master.gain.linearRampToValueAtTime(0, t + 0.005); // 5ms ramp avoids click at chunk boundary
-    oscs.forEach(o => { try { o.stop(t + 0.010); } catch (e) {} }); // stop after ramp
+    // Hold the current interpolated value before ramping down — prevents click on retrigger
+    if (master.gain.cancelAndHoldAtTime) {
+      master.gain.cancelAndHoldAtTime(t);
+    } else {
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
+    }
+    master.gain.linearRampToValueAtTime(0, t + 0.008);
+    oscs.forEach(o => { try { o.stop(t + 0.012); } catch (e) {} });
     delete map[midi];
   }
 }

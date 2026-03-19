@@ -12,17 +12,10 @@
 </head>
 <body>
 
-<div class="start-overlay" id="startOverlay">
-  <div class="overlay-logo">Pocket<span>Piano</span></div>
-  <button class="start-btn" id="startBtn">Tap to Play</button>
-  <div class="overlay-sub">tap to enable audio</div>
-</div>
-
 <div class="header">
   <div class="logo">Pocket<span>Piano</span></div>
   <div class="pr-badge" id="prBadge"></div>
 </div>
-<div class="hint">scroll to explore all keys</div>
 
 <div class="piano-wrapper">
   <div class="lid"></div>
@@ -31,13 +24,18 @@
       <div class="black-keys-layer" id="blackKeysLayer"></div>
     </div>
   </div>
-  <div class="rail"></div>
+  <div class="rail">
+    <input type="range" class="scroll-slider" id="scrollSlider" min="0" max="1000" value="0" />
+  </div>
 </div>
+
+<div class="note-display" id="noteDisplay"></div>
 
 <script type="module">
   import { initAudio } from './src/audio.js';
   import { buildKeyboard } from './src/keyboard.js';
 
+  initAudio();
   buildKeyboard();
 
   (async () => {
@@ -56,12 +54,6 @@
       }
     } catch (e) {}
   })();
-
-  document.getElementById('startBtn').addEventListener('click', () => {
-    initAudio().then(() => {
-      document.getElementById('startOverlay').classList.add('hidden');
-    });
-  });
 </script>
 </body>
 </html>

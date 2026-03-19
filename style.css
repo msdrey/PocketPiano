@@ -29,41 +29,6 @@ html, body {
 
 body { display: flex; flex-direction: column; }
 
-/* ── Start overlay ── */
-.start-overlay {
-  position: fixed; inset: 0;
-  background: var(--bg);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  z-index: 999; gap: 28px;
-}
-.hidden { display: none !important; }
-
-.overlay-logo {
-  font-size: 36px; font-weight: 700;
-  color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
-}
-.overlay-logo span { color: var(--cream); font-weight: 400; }
-
-.start-btn {
-  border: 1px solid var(--gold);
-  background: transparent;
-  color: var(--gold);
-  font-family: 'Courier Prime', monospace;
-  font-size: 13px; letter-spacing: 0.25em;
-  text-transform: uppercase;
-  padding: 16px 40px; border-radius: 2px; cursor: pointer;
-  -webkit-appearance: none;
-  transition: background 0.15s, color 0.15s;
-}
-.start-btn:active { background: var(--gold); color: var(--bg); }
-
-.overlay-sub {
-  font-family: 'Courier Prime', monospace;
-  font-size: 10px; color: var(--gold);
-  opacity: 0.4; letter-spacing: 0.2em;
-}
-
 /* ── Header ── */
 .header {
   flex-shrink: 0;
@@ -85,13 +50,6 @@ body { display: flex; flex-direction: column; }
   z-index: 1000;
 }
 
-.hint {
-  flex-shrink: 0; text-align: center;
-  font-family: 'Courier Prime', monospace;
-  font-size: 10px; color: var(--gold);
-  opacity: 0.35; letter-spacing: 0.2em; padding-bottom: 10px;
-}
-
 /* ── Piano wrapper ── */
 .piano-wrapper {
   flex: 1; overflow: hidden;
@@ -110,7 +68,8 @@ body { display: flex; flex-direction: column; }
 }
 
 .keyboard-scroll {
-  flex: 1; overflow-x: auto; overflow-y: hidden;
+  flex: none; height: 170px;
+  overflow-x: auto; overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   background: linear-gradient(180deg, #1a1612 0%, #100e0b 100%);
@@ -164,6 +123,39 @@ body { display: flex; flex-direction: column; }
 }
 
 .rail {
-  flex-shrink: 0; height: 20px;
+  flex-shrink: 0; height: 48px;
   background: linear-gradient(180deg, #1a1410, #0a0806);
+  display: flex; align-items: center; padding: 0 20px;
 }
+
+.scroll-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px;
+  background: rgba(200,169,110,0.2);
+  border-radius: 2px; outline: none; cursor: pointer;
+  touch-action: auto;
+}
+.scroll-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--gold); cursor: pointer;
+  box-shadow: 0 0 8px rgba(200,169,110,0.5);
+}
+.scroll-slider::-moz-range-thumb {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: var(--gold); cursor: pointer;
+  box-shadow: 0 0 8px rgba(200,169,110,0.5);
+}
+
+.note-display {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  background: rgba(200,169,110,0.12);
+  border: 1px solid rgba(200,169,110,0.25);
+  border-radius: 4px; padding: 4px 16px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px; color: var(--gold-light);
+  letter-spacing: 0.2em; opacity: 0;
+  transition: opacity 0.15s; pointer-events: none;
+  z-index: 100; min-width: 80px; text-align: center;
+}
+.note-display.visible { opacity: 1; }

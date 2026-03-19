@@ -45,7 +45,32 @@ export function buildKeyboard() {
   }
 
   // Scroll to C3 on load
-  document.getElementById('keyboardScroll').scrollLeft = 7 * WHITE_W - 20;
+  const scrollEl = document.getElementById('keyboardScroll');
+  scrollEl.scrollLeft = 7 * WHITE_W - 20;
+
+  // Wire scroll slider
+  const slider = document.getElementById('scrollSlider');
+  function syncSlider() {
+    const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+    if (max > 0) slider.value = Math.round((scrollEl.scrollLeft / max) * 1000);
+  }
+  scrollEl.addEventListener('scroll', syncSlider, { passive: true });
+  slider.addEventListener('input', () => {
+    const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+    scrollEl.scrollLeft = (slider.value / 1000) * max;
+  });
+  requestAnimationFrame(syncSlider);
+}
+
+// ── Note display ───────────────────────────────────────────────────────────────
+const noteDisplay = document.getElementById('noteDisplay');
+let noteTimeout;
+function showNote(name) {
+  if (!noteDisplay) return;
+  noteDisplay.textContent = name;
+  noteDisplay.classList.add('visible');
+  clearTimeout(noteTimeout);
+  noteTimeout = setTimeout(() => noteDisplay.classList.remove('visible'), 900);
 }
 
 // ── Press / release ────────────────────────────────────────────────────────────
@@ -55,6 +80,7 @@ function press(midi) {
   if (pressed.has(midi)) return;
   pressed.add(midi);
   playNote(midi);
+  showNote(noteName(midi));
   document.querySelector(`[data-midi="${midi}"]`)?.classList.add('pressed');
 }
 
@@ -81,8 +107,6 @@ function keyAt(x, y) {
 const touchMap = {};
 
 document.addEventListener('touchstart', e => {
-  // Don't intercept touches while the start overlay is visible — the button needs its click event
-  if (!document.getElementById('startOverlay')?.classList.contains('hidden')) return;
   for (const t of e.changedTouches) {
     const m = keyAt(t.clientX, t.clientY);
     if (m !== null) {

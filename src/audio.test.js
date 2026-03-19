@@ -101,11 +101,15 @@ describe('playNote', () => {
     expect(master.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.28, expect.any(Number));
   });
 
-  it('retrigger cancels old gain before starting fresh', () => {
+  it('retrigger holds or cancels old gain before starting fresh', () => {
     playNote(60);
     const firstMaster = mockCtx.createGain.mock.results[0].value;
     playNote(60); // retrigger
-    expect(firstMaster.gain.cancelScheduledValues).toHaveBeenCalled();
+    // killNodes uses cancelAndHoldAtTime when available (our click fix), falls back to cancelScheduledValues
+    const stopped =
+      firstMaster.gain.cancelAndHoldAtTime.mock.calls.length > 0 ||
+      firstMaster.gain.cancelScheduledValues.mock.calls.length > 0;
+    expect(stopped).toBe(true);
   });
 
   it('does nothing when ctx is null', () => {
