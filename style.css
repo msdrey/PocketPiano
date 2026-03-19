@@ -78,9 +78,11 @@ body { display: flex; flex-direction: column; }
 .logo span { color: var(--cream); font-weight: 400; }
 
 .pr-badge {
+  position: fixed; top: 14px; right: 20px;
   font-family: 'Courier Prime', monospace;
   font-size: 11px; color: var(--gold);
   opacity: 0.4; letter-spacing: 0.1em;
+  z-index: 1000;
 }
 
 .hint {
