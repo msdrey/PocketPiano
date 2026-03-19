@@ -11,6 +11,11 @@
   ```
 - Never reuse old branches. Always start fresh from `main`.
 
+## Testing
+
+- **Every code change** (new feature, bug fix, refactor) must include a corresponding new or updated unit test that covers the changed behaviour.
+- **Run `npm test` after every commit.** If tests fail, fix the code — never modify a test just to make it pass. Tests must fail for a real reason; the fix belongs in the implementation, not the test.
+
 ## Git push
 
 - Always push with: `git push -u origin <branch-name>`
