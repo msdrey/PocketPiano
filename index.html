@@ -209,7 +209,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startOverlay').classList.add('hidden');
 });
 
-// ── Synthesis ─────────────────────────────────────────────────────────────────
+// ── Synthesis (Karplus-Strong string model) ───────────────────────────────────
 const activeNodes = {};
 function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
 
@@ -219,42 +219,66 @@ function playNote(midi) {
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
 
-  const osc1 = ctx.createOscillator();
-  const osc2 = ctx.createOscillator();
-  const osc3 = ctx.createOscillator();
-  osc1.type = 'sawtooth'; osc1.frequency.value = freq;
-  osc2.type = 'square';   osc2.frequency.value = freq * 2.001;
-  osc3.type = 'sine';     osc3.frequency.value = freq * 0.999;
+  // Buffer length = one period of the target frequency
+  const sampleRate = ctx.sampleRate;
+  const bufLen = Math.round(sampleRate / freq);
+  const noiseBuffer = ctx.createBuffer(1, bufLen, sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
 
-  const g1 = ctx.createGain(); g1.gain.value = 0.18;
-  const g2 = ctx.createGain(); g2.gain.value = 0.04;
-  const g3 = ctx.createGain(); g3.gain.value = 0.25;
+  // Noise burst source (one-shot)
+  const noise = ctx.createBufferSource();
+  noise.buffer = noiseBuffer;
 
+  // Delay line length = one period
+  const delay = ctx.createDelay();
+  delay.delayTime.value = 1 / freq;
+
+  // Low-pass filter simulates string energy loss per cycle
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  // Higher notes decay faster (brighter attack, quicker damping)
+  lp.frequency.value = Math.min(freq * 6, sampleRate * 0.45);
+
+  // Feedback gain — controls sustain (< 1 to ensure decay)
+  const feedback = ctx.createGain();
+  feedback.gain.value = 0.97;
+
+  // Master gain for overall volume shaping
   const master = ctx.createGain();
-  master.gain.setValueAtTime(0, now);
-  master.gain.linearRampToValueAtTime(0.5, now + 0.008);
-  master.gain.exponentialRampToValueAtTime(0.25, now + 0.15);
-  master.gain.exponentialRampToValueAtTime(0.12, now + 0.8);
+  master.gain.setValueAtTime(0.7, now);
 
-  const hp = ctx.createBiquadFilter();
-  hp.type = 'highpass'; hp.frequency.value = 60;
+  // Attack transient: brief high-passed click for hammer feel
+  const attackOsc = ctx.createOscillator();
+  attackOsc.type = 'sine';
+  attackOsc.frequency.value = freq;
+  const attackGain = ctx.createGain();
+  attackGain.gain.setValueAtTime(0.3, now);
+  attackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
 
-  const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.018;
-  const dg = ctx.createGain(); dg.gain.value = 0.12;
+  // Karplus-Strong feedback loop: noise → delay → lp → feedback → delay
+  noise.connect(delay);
+  delay.connect(lp);
+  lp.connect(feedback);
+  feedback.connect(delay);
 
-  osc1.connect(g1); osc2.connect(g2); osc3.connect(g3);
-  g1.connect(master); g2.connect(master); g3.connect(master);
-  master.connect(hp);
-  hp.connect(ctx.destination);
-  hp.connect(delay); delay.connect(dg); dg.connect(ctx.destination);
-  osc1.start(now); osc2.start(now); osc3.start(now);
+  // Mix loop output and attack transient into master
+  lp.connect(master);
+  attackOsc.connect(attackGain);
+  attackGain.connect(master);
+  master.connect(ctx.destination);
 
-  activeNodes[midi] = { osc1, osc2, osc3, master };
+  noise.start(now);
+  noise.stop(now + 1 / freq); // one-shot burst
+  attackOsc.start(now);
+  attackOsc.stop(now + 0.025);
+
+  activeNodes[midi] = { delay, lp, feedback, master, attackOsc, attackGain };
 }
 
 function stopNote(midi) {
   if (!activeNodes[midi]) return;
-  const { osc1, osc2, osc3, master } = activeNodes[midi];
+  const { master } = activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {
     master.gain.cancelAndHoldAtTime(now);
@@ -262,8 +286,10 @@ function stopNote(midi) {
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(master.gain.value, now);
   }
-  master.gain.linearRampToValueAtTime(0, now + 0.3);
-  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 400);
+  master.gain.linearRampToValueAtTime(0, now + 0.5);
+  setTimeout(() => {
+    try { master.disconnect(); } catch(e) {}
+  }, 600);
   delete activeNodes[midi];
 }
 
