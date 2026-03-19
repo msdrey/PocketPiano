@@ -42,6 +42,12 @@ body { display: flex; flex-direction: column; }
 }
 .logo span { color: var(--cream); font-weight: 400; }
 
+@media (orientation: landscape) {
+  .header { padding: 5px 20px 4px; }
+  .logo { font-size: 15px; }
+  .pr-badge { top: 5px; }
+}
+
 .pr-badge {
   position: fixed; top: 14px; right: 20px;
   font-family: 'Courier Prime', monospace;
@@ -68,7 +74,7 @@ body { display: flex; flex-direction: column; }
 }
 
 .keyboard-scroll {
-  flex: none; height: 340px;
+  flex: 1;
   overflow-x: auto; overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -123,9 +129,13 @@ body { display: flex; flex-direction: column; }
 }
 
 .rail {
-  flex-shrink: 0; height: 98px;
+  flex-shrink: 0; height: 60px;
   background: linear-gradient(180deg, #1a1410, #0a0806);
-  display: flex; align-items: flex-start; padding: 50px 20px 0;
+  display: flex; align-items: center; padding: 0 20px;
+}
+
+@media (orientation: landscape) {
+  .rail { height: 44px; }
 }
 
 .scroll-slider {
