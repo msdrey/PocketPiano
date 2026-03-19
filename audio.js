@@ -15,6 +15,7 @@ export function initAudio() {
 
 // ── Synthesis (additive sine harmonics) ───────────────────────────────────────
 const activeNodes = {};
+const fadingNodes = {}; // nodes in release fade, still need killing on retrigger
 
 function midiToFreq(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
@@ -32,16 +33,20 @@ const HARMONICS = [
   [7, 0.02],
 ];
 
-export function playNote(midi) {
-  if (!ctx) return;
-  // Cut any existing note on this key immediately (avoids click from overlapping oscillators)
-  if (activeNodes[midi]) {
-    const { oscs, master } = activeNodes[midi];
+function killNodes(midi) {
+  for (const map of [activeNodes, fadingNodes]) {
+    if (!map[midi]) continue;
+    const { oscs, master } = map[midi];
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setValueAtTime(0, ctx.currentTime);
-    setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch (e) {} }); }, 50);
-    delete activeNodes[midi];
+    oscs.forEach(o => { try { o.stop(); } catch (e) {} });
+    delete map[midi];
   }
+}
+
+export function playNote(midi) {
+  if (!ctx) return;
+  killNodes(midi);
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
 
@@ -73,6 +78,7 @@ export function playNote(midi) {
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
   const { oscs, master } = activeNodes[midi];
+  delete activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {
     master.gain.cancelAndHoldAtTime(now);
@@ -81,6 +87,9 @@ export function stopNote(midi) {
     master.gain.setValueAtTime(master.gain.value, now);
   }
   master.gain.linearRampToValueAtTime(0, now + 0.3);
-  setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch (e) {} }); }, 400);
-  delete activeNodes[midi];
+  fadingNodes[midi] = { oscs, master };
+  setTimeout(() => {
+    oscs.forEach(o => { try { o.stop(); } catch (e) {} });
+    delete fadingNodes[midi];
+  }, 400);
 }
