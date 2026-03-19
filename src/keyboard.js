@@ -81,6 +81,8 @@ function keyAt(x, y) {
 const touchMap = {};
 
 document.addEventListener('touchstart', e => {
+  // Don't intercept touches while the start overlay is visible — the button needs its click event
+  if (!document.getElementById('startOverlay')?.classList.contains('hidden')) return;
   for (const t of e.changedTouches) {
     const m = keyAt(t.clientX, t.clientY);
     if (m !== null) {
