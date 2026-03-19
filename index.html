@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Piano" />
+  <title>Piano</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Courier+Prime&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0c0a;
+      --gold: #c8a96e;
+      --gold-light: #e2c98a;
+      --cream: #f5f0e8;
+      --white-key: #f0ebe0;
+      --white-key-pressed: #d4c9a8;
+      --black-key: #1a1410;
+      --black-key-pressed: #3a2e20;
+    }
+
+    html, body {
+      height: 100%; width: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Playfair Display', serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body { display: flex; flex-direction: column; }
+
+    /* ── Start overlay ── */
+    .start-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999; gap: 28px;
+    }
+    .hidden { display: none !important; }
+
+    .overlay-logo {
+      font-size: 36px; font-weight: 700;
+      color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .overlay-logo span { color: var(--cream); font-weight: 400; }
+
+    .start-btn {
+      border: 1px solid var(--gold);
+      background: transparent;
+      color: var(--gold);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px; letter-spacing: 0.25em;
+      text-transform: uppercase;
+      padding: 16px 40px; border-radius: 2px; cursor: pointer;
+      -webkit-appearance: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .start-btn:active { background: var(--gold); color: var(--bg); }
+
+    .overlay-sub {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px; color: var(--gold);
+      opacity: 0.4; letter-spacing: 0.2em;
+    }
+
+    /* ── Header ── */
+    .header {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px 10px;
+      position: relative; z-index: 10;
+    }
+    .logo {
+      font-size: 22px; font-weight: 700;
+      color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .logo span { color: var(--cream); font-weight: 400; }
+
+    .hint {
+      flex-shrink: 0; text-align: center;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px; color: var(--gold);
+      opacity: 0.35; letter-spacing: 0.2em; padding-bottom: 10px;
+    }
+
+    /* ── Piano wrapper ── */
+    .piano-wrapper {
+      flex: 1; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .lid {
+      flex-shrink: 0; height: 18px;
+      background: linear-gradient(180deg, #0a0806 0%, #2a221a 60%, transparent 100%);
+      position: relative; z-index: 5;
+    }
+    .lid::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0.4;
+    }
+
+    .keyboard-scroll {
+      flex: 1; overflow-x: auto; overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      background: linear-gradient(180deg, #1a1612 0%, #100e0b 100%);
+    }
+    .keyboard-scroll::-webkit-scrollbar { display: none; }
+
+    .keyboard {
+      position: relative; height: 100%;
+      display: inline-flex; padding: 0 12px;
+    }
+
+    .key-white {
+      position: relative;
+      width: 52px; height: 100%;
+      background: linear-gradient(180deg, var(--white-key) 0%, #e8e2d0 60%, #d8d2c0 100%);
+      border-left: 1px solid #b0a890;
+      border-right: 1px solid #b0a890;
+      border-bottom: 4px solid #8a7f68;
+      border-radius: 0 0 8px 8px;
+      cursor: pointer; flex-shrink: 0;
+      box-shadow: inset 0 -4px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.9);
+      transition: background 0.04s, transform 0.04s;
+    }
+    .key-white.pressed {
+      background: linear-gradient(180deg, var(--white-key-pressed) 0%, #c4ba98 60%, #b4aa88 100%);
+      transform: translateY(2px);
+    }
+    .key-white .label {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      font-family: 'Courier Prime', monospace; font-size: 9px;
+      color: #8a7f68; pointer-events: none;
+    }
+
+    .black-keys-layer {
+      position: absolute; top: 0; left: 0;
+      height: 62%; pointer-events: none;
+    }
+    .key-black {
+      position: absolute; width: 34px; height: 100%;
+      background: linear-gradient(180deg, #2a2218 0%, var(--black-key) 40%);
+      border-radius: 0 0 5px 5px;
+      cursor: pointer; pointer-events: all;
+      transform: translateX(-50%);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+      transition: background 0.04s, transform 0.04s;
+      z-index: 2;
+    }
+    .key-black.pressed {
+      background: linear-gradient(180deg, #3a2e20 0%, var(--black-key-pressed) 40%);
+      transform: translateX(-50%) translateY(2px);
+    }
+
+    .rail {
+      flex-shrink: 0; height: 20px;
+      background: linear-gradient(180deg, #1a1410, #0a0806);
+    }
+
+    .note-display {
+      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+      background: rgba(200,169,110,0.12);
+      border: 1px solid rgba(200,169,110,0.25);
+      border-radius: 4px; padding: 4px 16px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px; color: var(--gold-light);
+      letter-spacing: 0.2em; opacity: 0;
+      transition: opacity 0.15s; pointer-events: none;
+      z-index: 100; min-width: 80px; text-align: center;
+    }
+    .note-display.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="start-overlay" id="startOverlay">
+  <div class="overlay-logo">Grand<span>Keys</span></div>
+  <button class="start-btn" id="startBtn">Tap to Play</button>
+  <div class="overlay-sub">tap to enable audio</div>
+</div>
+
+<div class="header">
+  <div class="logo">Grand<span>Keys</span></div>
+</div>
+<div class="hint">scroll to explore all keys</div>
+
+<div class="piano-wrapper">
+  <div class="lid"></div>
+  <div class="keyboard-scroll" id="keyboardScroll">
+    <div class="keyboard" id="keyboard">
+      <div class="black-keys-layer" id="blackKeysLayer"></div>
+    </div>
+  </div>
+  <div class="rail"></div>
+</div>
+
+<div class="note-display" id="noteDisplay"></div>
+
+<script>
+// ── Audio unlock (iOS Safari requires user gesture before AudioContext works) ──
+let ctx = null;
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+
+  // Unlock iOS by playing a silent buffer on the first gesture
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+
+  document.getElementById('startOverlay').classList.add('hidden');
+});
+
+// ── Synthesis ─────────────────────────────────────────────────────────────────
+const activeNodes = {};
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function playNote(midi) {
+  if (!ctx) return;
+  stopNote(midi);
+  const freq = midiToFreq(midi);
+  const now = ctx.currentTime;
+
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const osc3 = ctx.createOscillator();
+  osc1.type = 'sawtooth'; osc1.frequency.value = freq;
+  osc2.type = 'square';   osc2.frequency.value = freq * 2.001;
+  osc3.type = 'sine';     osc3.frequency.value = freq * 0.999;
+
+  const g1 = ctx.createGain(); g1.gain.value = 0.18;
+  const g2 = ctx.createGain(); g2.gain.value = 0.04;
+  const g3 = ctx.createGain(); g3.gain.value = 0.25;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.5, now + 0.008);
+  master.gain.exponentialRampToValueAtTime(0.25, now + 0.15);
+  master.gain.exponentialRampToValueAtTime(0.12, now + 0.8);
+
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 60;
+
+  const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.018;
+  const dg = ctx.createGain(); dg.gain.value = 0.12;
+
+  osc1.connect(g1); osc2.connect(g2); osc3.connect(g3);
+  g1.connect(master); g2.connect(master); g3.connect(master);
+  master.connect(hp);
+  hp.connect(ctx.destination);
+  hp.connect(delay); delay.connect(dg); dg.connect(ctx.destination);
+  osc1.start(now); osc2.start(now); osc3.start(now);
+
+  activeNodes[midi] = { osc1, osc2, osc3, master };
+}
+
+function stopNote(midi) {
+  if (!activeNodes[midi]) return;
+  const { osc1, osc2, osc3, master } = activeNodes[midi];
+  const now = ctx.currentTime;
+  master.gain.cancelScheduledValues(now);
+  master.gain.setValueAtTime(master.gain.value, now);
+  master.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+  setTimeout(() => { try { osc1.stop(); osc2.stop(); osc3.stop(); } catch(e){} }, 500);
+  delete activeNodes[midi];
+}
+
+// ── Keyboard layout ───────────────────────────────────────────────────────────
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
+function isBlack(m)  { return [1,3,6,8,10].includes(m % 12); }
+
+const START = 36, END = 84, WHITE_W = 52;
+const keyboard = document.getElementById('keyboard');
+const blackLayer = document.getElementById('blackKeysLayer');
+const noteDisplay = document.getElementById('noteDisplay');
+
+let whiteCount = 0;
+const midiToWIdx = {};
+
+for (let m = START; m <= END; m++) {
+  if (isBlack(m)) continue;
+  midiToWIdx[m] = whiteCount++;
+  const el = document.createElement('div');
+  el.className = 'key-white';
+  el.dataset.midi = m;
+  if (m % 12 === 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = noteName(m);
+    el.appendChild(lbl);
+  }
+  keyboard.appendChild(el);
+}
+
+const totalW = whiteCount * WHITE_W + 24;
+keyboard.style.width = totalW + 'px';
+blackLayer.style.width = totalW + 'px';
+
+for (let m = START; m <= END; m++) {
+  if (!isBlack(m)) continue;
+  const li = midiToWIdx[m - 1];
+  if (li === undefined) continue;
+  const el = document.createElement('div');
+  el.className = 'key-black';
+  el.dataset.midi = m;
+  el.style.left = (12 + li * WHITE_W + WHITE_W + 1) + 'px';
+  blackLayer.appendChild(el);
+}
+
+// ── Note display ──────────────────────────────────────────────────────────────
+let noteTimeout;
+function showNote(name) {
+  noteDisplay.textContent = name;
+  noteDisplay.classList.add('visible');
+  clearTimeout(noteTimeout);
+  noteTimeout = setTimeout(() => noteDisplay.classList.remove('visible'), 900);
+}
+
+// ── Press / release ───────────────────────────────────────────────────────────
+const pressed = new Set();
+function press(midi) {
+  if (pressed.has(midi)) return;
+  pressed.add(midi);
+  playNote(midi);
+  showNote(noteName(midi));
+  document.querySelector(`[data-midi="${midi}"]`)?.classList.add('pressed');
+}
+function release(midi) {
+  if (!pressed.has(midi)) return;
+  pressed.delete(midi);
+  stopNote(midi);
+  document.querySelector(`[data-midi="${midi}"]`)?.classList.remove('pressed');
+}
+
+function keyAt(x, y) {
+  for (const el of document.querySelectorAll('.key-black')) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
+  }
+  for (const el of document.querySelectorAll('.key-white')) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
+  }
+  return null;
+}
+
+// ── Touch ─────────────────────────────────────────────────────────────────────
+const touchMap = {};
+document.addEventListener('touchstart', e => {
+  for (const t of e.changedTouches) {
+    const m = keyAt(t.clientX, t.clientY);
+    if (m !== null) { touchMap[t.identifier] = m; press(m); }
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    const newM = keyAt(t.clientX, t.clientY);
+    const oldM = touchMap[t.identifier];
+    if (newM !== oldM) {
+      if (oldM !== undefined) release(oldM);
+      if (newM !== null) { touchMap[t.identifier] = newM; press(newM); }
+      else delete touchMap[t.identifier];
+    }
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  for (const t of e.changedTouches) {
+    if (touchMap[t.identifier] !== undefined) { release(touchMap[t.identifier]); delete touchMap[t.identifier]; }
+  }
+}, { passive: true });
+
+document.addEventListener('touchcancel', e => {
+  for (const t of e.changedTouches) {
+    if (touchMap[t.identifier] !== undefined) { release(touchMap[t.identifier]); delete touchMap[t.identifier]; }
+  }
+}, { passive: true });
+
+// ── Mouse (desktop) ───────────────────────────────────────────────────────────
+let mouseHeld = false, mouseMidi = null;
+document.addEventListener('mousedown', e => {
+  mouseHeld = true;
+  const m = keyAt(e.clientX, e.clientY);
+  if (m !== null) { mouseMidi = m; press(m); }
+});
+document.addEventListener('mousemove', e => {
+  if (!mouseHeld) return;
+  const m = keyAt(e.clientX, e.clientY);
+  if (m !== mouseMidi) { if (mouseMidi !== null) release(mouseMidi); mouseMidi = m; if (m !== null) press(m); }
+});
+document.addEventListener('mouseup', () => {
+  mouseHeld = false;
+  if (mouseMidi !== null) { release(mouseMidi); mouseMidi = null; }
+});
+
+// ── Initial scroll position (C3) ──────────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('keyboardScroll').scrollLeft = 7 * WHITE_W - 20;
+});
+</script>
+</body>
+</html>
