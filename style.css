@@ -146,16 +146,3 @@ body { display: flex; flex-direction: column; }
   background: var(--gold); cursor: pointer;
   box-shadow: 0 0 8px rgba(200,169,110,0.5);
 }
-
-.note-display {
-  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-  background: rgba(200,169,110,0.12);
-  border: 1px solid rgba(200,169,110,0.25);
-  border-radius: 4px; padding: 4px 16px;
-  font-family: 'Courier Prime', monospace;
-  font-size: 13px; color: var(--gold-light);
-  letter-spacing: 0.2em; opacity: 0;
-  transition: opacity 0.15s; pointer-events: none;
-  z-index: 100; min-width: 80px; text-align: center;
-}
-.note-display.visible { opacity: 1; }
