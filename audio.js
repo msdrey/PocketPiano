@@ -34,7 +34,14 @@ const HARMONICS = [
 
 export function playNote(midi) {
   if (!ctx) return;
-  stopNote(midi);
+  // Cut any existing note on this key immediately (avoids click from overlapping oscillators)
+  if (activeNodes[midi]) {
+    const { oscs, master } = activeNodes[midi];
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch (e) {} }); }, 50);
+    delete activeNodes[midi];
+  }
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
 
