@@ -37,9 +37,10 @@ function killNodes(midi) {
   for (const map of [activeNodes, fadingNodes]) {
     if (!map[midi]) continue;
     const { oscs, master } = map[midi];
-    master.gain.cancelScheduledValues(ctx.currentTime);
-    master.gain.setValueAtTime(0, ctx.currentTime);
-    oscs.forEach(o => { try { o.stop(); } catch (e) {} });
+    const t = ctx.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.linearRampToValueAtTime(0, t + 0.005); // 5ms ramp avoids click at chunk boundary
+    oscs.forEach(o => { try { o.stop(t + 0.010); } catch (e) {} }); // stop after ramp
     delete map[midi];
   }
 }
