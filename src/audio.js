@@ -17,9 +17,11 @@ export function initAudio() {
 const activeNodes = {};
 const fadingNodes = {}; // nodes in release fade, still need killing on retrigger
 
-function midiToFreq(m) {
+export function midiToFreq(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
 }
+
+export function setContext(audioCtx) { ctx = audioCtx; }
 
 // Harmonic series: [multiplier, relative amplitude]
 // Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics

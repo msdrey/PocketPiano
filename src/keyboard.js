@@ -4,8 +4,8 @@ import { playNote, stopNote } from './audio.js';
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const START = 36, END = 84, WHITE_W = 52;
 
-function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
-function isBlack(m)  { return [1, 3, 6, 8, 10].includes(m % 12); }
+export function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
+export function isBlack(m)  { return [1, 3, 6, 8, 10].includes(m % 12); }
 
 export function buildKeyboard() {
   const keyboard  = document.getElementById('keyboard');
