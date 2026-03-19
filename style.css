@@ -68,7 +68,7 @@ body { display: flex; flex-direction: column; }
 }
 
 .keyboard-scroll {
-  flex: none; height: 170px;
+  flex: none; height: 340px;
   overflow-x: auto; overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -83,7 +83,7 @@ body { display: flex; flex-direction: column; }
 
 .key-white {
   position: relative;
-  width: 52px; height: 100%;
+  width: 47px; height: 100%;
   background: linear-gradient(180deg, var(--white-key) 0%, #e8e2d0 60%, #d8d2c0 100%);
   border-left: 1px solid #b0a890;
   border-right: 1px solid #b0a890;
@@ -108,7 +108,7 @@ body { display: flex; flex-direction: column; }
   height: 62%; pointer-events: none;
 }
 .key-black {
-  position: absolute; width: 34px; height: 100%;
+  position: absolute; width: 31px; height: 100%;
   background: linear-gradient(180deg, #2a2218 0%, var(--black-key) 40%);
   border-radius: 0 0 5px 5px;
   cursor: pointer; pointer-events: all;
@@ -123,9 +123,9 @@ body { display: flex; flex-direction: column; }
 }
 
 .rail {
-  flex-shrink: 0; height: 48px;
+  flex-shrink: 0; height: 98px;
   background: linear-gradient(180deg, #1a1410, #0a0806);
-  display: flex; align-items: center; padding: 0 20px;
+  display: flex; align-items: flex-start; padding: 50px 20px 0;
 }
 
 .scroll-slider {

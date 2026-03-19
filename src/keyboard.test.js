@@ -94,8 +94,8 @@ describe('buildKeyboard', () => {
     expect(d4.querySelector('.label')).toBeNull();
   });
 
-  it('sets keyboard width', () => {
+  it('sets keyboard width based on WHITE_W=47 and 29 white keys', () => {
     const keyboard = document.getElementById('keyboard');
-    expect(keyboard.style.width).not.toBe('');
+    expect(keyboard.style.width).toBe('1387px'); // 29 * 47 + 24
   });
 });
