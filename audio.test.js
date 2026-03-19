@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { midiToFreq, setContext, playNote, stopNote } from '../audio.js';
+import { midiToFreq, setContext, playNote, stopNote } from './audio.js';
 
 // ── Web Audio API mock ─────────────────────────────────────────────────────────
 function makeGainNode() {

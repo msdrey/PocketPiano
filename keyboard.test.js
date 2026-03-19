@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { noteName, isBlack, buildKeyboard } from '../keyboard.js';
+import { noteName, isBlack, buildKeyboard } from './keyboard.js';
 
 // ── noteName ───────────────────────────────────────────────────────────────────
 describe('noteName', () => {
