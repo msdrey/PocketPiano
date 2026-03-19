@@ -111,7 +111,13 @@ describe('responsive layout (style.css)', () => {
 
   it('keyboard-scroll uses flex:1 (no fixed height)', () => {
     expect(css).toMatch(/\.keyboard-scroll\s*\{[^}]*flex:\s*1/);
-    expect(css).not.toMatch(/\.keyboard-scroll\s*\{[^}]*height:\s*\d/);
+    // bare `height` with a pixel value is disallowed; max-height is fine
+    const block = css.match(/\.keyboard-scroll\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(block).not.toMatch(/(?<![-\w])height:\s*\d/);
+  });
+
+  it('keyboard-scroll caps height at 300px via max-height', () => {
+    expect(css).toMatch(/\.keyboard-scroll\s*\{[^}]*max-height:\s*300px/);
   });
 
   it('rail has compact height of 60px', () => {
