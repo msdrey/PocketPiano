@@ -170,3 +170,6 @@ body { display: flex; flex-direction: column; }
 @media (min-width: 1420px) {
   .keyboard-scroll { display: flex; justify-content: center; }
 }
+@media (min-width: 1420px) {
+  .header { padding-left: max(28px, calc((100vw - var(--keyboard-width, 1387px)) / 2)); }
+}
