@@ -12,6 +12,15 @@ function getContext() {
   return ctx;
 }
 
+// When the page is restored from BFCache (tab closed/reopened), the module's
+// ctx variable still points to the old AudioContext which is now dead.
+// Reset it so the next keypress creates a fresh one.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && ctx) { ctx.close(); ctx = null; }
+  });
+}
+
 // ── Synthesis (additive sine harmonics) ───────────────────────────────────────
 const activeNodes = {};
 const fadingNodes = {}; // nodes in release fade, still need killing on retrigger
