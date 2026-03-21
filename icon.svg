@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1a1a1a" rx="80"/>
+  <!-- White keys: 7 keys, 60px wide, 66px spacing, starting x=28 -->
+  <rect x="28"  y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="94"  y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="160" y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="226" y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="292" y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="358" y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <rect x="424" y="80" width="60" height="352" rx="6" fill="#eeebd8"/>
+  <!-- Black keys: centered in gap between adjacent white keys -->
+  <rect x="72"  y="80" width="38" height="218" rx="4" fill="#121212"/>
+  <rect x="138" y="80" width="38" height="218" rx="4" fill="#121212"/>
+  <rect x="270" y="80" width="38" height="218" rx="4" fill="#121212"/>
+  <rect x="336" y="80" width="38" height="218" rx="4" fill="#121212"/>
+  <rect x="402" y="80" width="38" height="218" rx="4" fill="#121212"/>
+</svg>
