@@ -28,10 +28,11 @@ function makeOscillator() {
   };
 }
 
-function makeMockCtx() {
+function makeMockCtx({ state = 'running' } = {}) {
   return {
     currentTime: 0,
     sampleRate: 44100,
+    state,
     destination: {},
     createGain: vi.fn(makeGainNode),
     createOscillator: vi.fn(makeOscillator),
@@ -110,6 +111,19 @@ describe('playNote', () => {
       firstMaster.gain.cancelAndHoldAtTime.mock.calls.length > 0 ||
       firstMaster.gain.cancelScheduledValues.mock.calls.length > 0;
     expect(stopped).toBe(true);
+  });
+
+  it('resumes a suspended context on first note (mobile unlock)', () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    playNote(60);
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+    setContext(mockCtx);
+  });
+
+  it('does not call resume when context is already running', () => {
+    playNote(60);
+    expect(mockCtx.resume).not.toHaveBeenCalled();
   });
 
   it('does nothing when ctx is null', () => {

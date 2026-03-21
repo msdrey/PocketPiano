@@ -55,6 +55,7 @@ function killNodes(midi) {
 
 export function playNote(midi) {
   if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
   killNodes(midi);
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
