@@ -28,10 +28,11 @@ function makeOscillator() {
   };
 }
 
-function makeMockCtx() {
+function makeMockCtx({ state = 'running' } = {}) {
   return {
     currentTime: 0,
     sampleRate: 44100,
+    state,
     destination: {},
     createGain: vi.fn(makeGainNode),
     createOscillator: vi.fn(makeOscillator),
@@ -112,8 +113,26 @@ describe('playNote', () => {
     expect(stopped).toBe(true);
   });
 
-  it('does nothing when ctx is null', () => {
+  it('resumes a suspended context and schedules note after resume resolves (mobile unlock)', async () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    playNote(60);
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+    // Oscillators not yet created — scheduling happens after resume() resolves
+    expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
+    await suspendedCtx.resume.mock.results[0].value; // flush promise
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(7);
+    setContext(mockCtx);
+  });
+
+  it('does not call resume when context is already running', () => {
+    playNote(60);
+    expect(mockCtx.resume).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when AudioContext is unavailable', () => {
     setContext(null);
+    // getContext() returns null when window.AudioContext is not defined (jsdom)
     expect(() => playNote(60)).not.toThrow();
     setContext(mockCtx);
   });

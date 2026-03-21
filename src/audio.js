@@ -1,15 +1,23 @@
 // ── Audio context ──────────────────────────────────────────────────────────────
 let ctx = null;
 
-export function initAudio() {
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  return ctx.resume().then(() => {
-    // Unlock iOS Safari: play a silent buffer on the first user gesture
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
+// Lazily create the AudioContext on first use (must be inside a user gesture so
+// Chrome starts it in 'running' state rather than 'suspended')
+function getContext() {
+  if (!ctx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    ctx = new Ctor();
+  }
+  return ctx;
+}
+
+// When the page is restored from BFCache (tab closed/reopened), the module's
+// ctx variable still points to the old AudioContext which is now dead.
+// Reset it so the next keypress creates a fresh one.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && ctx) { ctx.close(); ctx = null; }
   });
 }
 
@@ -53,8 +61,7 @@ function killNodes(midi) {
   }
 }
 
-export function playNote(midi) {
-  if (!ctx) return;
+function scheduleNote(midi) {
   killNodes(midi);
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
@@ -82,6 +89,17 @@ export function playNote(midi) {
 
   master.connect(ctx.destination);
   activeNodes[midi] = { oscs, master };
+}
+
+export function playNote(midi) {
+  const c = getContext();
+  if (!c) return;
+  if (c.state === 'suspended') {
+    // Fallback: context was created outside a user gesture (e.g. tests); resume first
+    c.resume().then(() => scheduleNote(midi));
+  } else {
+    scheduleNote(midi);
+  }
 }
 
 export function stopNote(midi) {
