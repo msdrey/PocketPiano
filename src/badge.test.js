@@ -13,4 +13,8 @@ describe('parsePrNumber', () => {
   it('returns null for a partial match that does not end with )', () => {
     expect(parsePrNumber('Fix bug (#42) and more')).toBeNull();
   });
+
+  it('returns null for an unmerged PR branch commit with no number', () => {
+    expect(parsePrNumber('Switch PR badge to Netlify-baked pr.json')).toBeNull();
+  });
 });
