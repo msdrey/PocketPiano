@@ -113,11 +113,15 @@ describe('playNote', () => {
     expect(stopped).toBe(true);
   });
 
-  it('resumes a suspended context on first note (mobile unlock)', () => {
+  it('resumes a suspended context and schedules note after resume resolves (mobile unlock)', async () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     playNote(60);
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+    // Oscillators not yet created — scheduling happens after resume() resolves
+    expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
+    await suspendedCtx.resume.mock.results[0].value; // flush promise
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(7);
     setContext(mockCtx);
   });
 

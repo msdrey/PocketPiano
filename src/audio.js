@@ -53,9 +53,7 @@ function killNodes(midi) {
   }
 }
 
-export function playNote(midi) {
-  if (!ctx) return;
-  if (ctx.state === 'suspended') ctx.resume();
+function scheduleNote(midi) {
   killNodes(midi);
   const freq = midiToFreq(midi);
   const now = ctx.currentTime;
@@ -83,6 +81,17 @@ export function playNote(midi) {
 
   master.connect(ctx.destination);
   activeNodes[midi] = { oscs, master };
+}
+
+export function playNote(midi) {
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    // Wait for context to resume before scheduling — Chrome drops events
+    // scheduled against a stale currentTime from a suspended context
+    ctx.resume().then(() => scheduleNote(midi));
+  } else {
+    scheduleNote(midi);
+  }
 }
 
 export function stopNote(midi) {
