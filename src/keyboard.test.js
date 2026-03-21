@@ -100,6 +100,10 @@ describe('buildKeyboard', () => {
     const keyboard = document.getElementById('keyboard');
     expect(keyboard.style.width).toBe('1387px'); // 29 * 47 + 24
   });
+
+  it('sets --keyboard-width CSS variable to match keyboard pixel width', () => {
+    expect(document.documentElement.style.getPropertyValue('--keyboard-width')).toBe('1387px');
+  });
 });
 
 // ── Responsive CSS layout ───────────────────────────────────────────────────────
@@ -142,5 +146,9 @@ describe('responsive layout (style.css)', () => {
 
   it('wide-screen media query (min-width: 1420px) centers keyboard-scroll', () => {
     expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.keyboard-scroll[^}]*justify-content:\s*center/s);
+  });
+
+  it('wide-screen media query (min-width: 1420px) aligns header with keyboard left edge', () => {
+    expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.header[^}]*--keyboard-width/s);
   });
 });

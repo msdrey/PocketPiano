@@ -32,6 +32,7 @@ export function buildKeyboard() {
   const totalW = whiteCount * WHITE_W + 24;
   keyboard.style.width = totalW + 'px';
   blackLayer.style.width = totalW + 'px';
+  document.documentElement.style.setProperty('--keyboard-width', totalW + 'px');
 
   for (let m = START; m <= END; m++) {
     if (!isBlack(m)) continue;
