@@ -157,3 +157,16 @@ body { display: flex; flex-direction: column; }
   background: var(--gold); cursor: pointer;
   box-shadow: 0 0 8px rgba(200,169,110,0.5);
 }
+
+/* ── Desktop enhancements ── */
+@media (min-width: 900px) {
+  .logo { font-size: 30px; }
+  .header { padding: 20px 28px 16px; }
+}
+
+@media (min-width: 1420px) {
+  .rail { display: none; }
+}
+@media (min-width: 1420px) {
+  .keyboard-scroll { display: flex; justify-content: center; }
+}

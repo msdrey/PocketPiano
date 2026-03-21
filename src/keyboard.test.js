@@ -131,4 +131,16 @@ describe('responsive layout (style.css)', () => {
   it('landscape media query shrinks rail height', () => {
     expect(css).toMatch(/@media\s*\(orientation:\s*landscape\)[^{]*\{[^}]*\.rail[^}]*height/s);
   });
+
+  it('desktop media query (min-width: 900px) increases logo font size', () => {
+    expect(css).toMatch(/@media[^{]*min-width:\s*900px[^{]*\{[^}]*\.logo[^}]*font-size/s);
+  });
+
+  it('wide-screen media query (min-width: 1420px) hides the rail', () => {
+    expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.rail[^}]*display:\s*none/s);
+  });
+
+  it('wide-screen media query (min-width: 1420px) centers keyboard-scroll', () => {
+    expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.keyboard-scroll[^}]*justify-content:\s*center/s);
+  });
 });
