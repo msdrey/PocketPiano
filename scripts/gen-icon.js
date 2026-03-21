@@ -43,26 +43,23 @@ function fillRect(x0, y0, w, h, r, g, b) {
 // Background
 fillRect(0, 0, W, H, 26, 26, 26);
 
-const PAD = 40;
-const keyAreaW = W - PAD * 2;
-const keyAreaH = H - PAD * 2;
-const N_WHITE = 7;
-const keyW = Math.floor(keyAreaW / N_WHITE);
-const GAP = 4;
+// Layout matches icon.svg: 7 white keys, 60px wide, 66px spacing, starting x=28, y=80
+const PAD_X = 28, PAD_Y = 80;
+const KEY_W = 60, KEY_H = 352, KEY_SPACING = 66;
+const BLACK_W = 38, BLACK_H = 218;
 
 // White keys
-for (let k = 0; k < N_WHITE; k++) {
-  const x = PAD + k * keyW + GAP;
-  fillRect(x, PAD, keyW - GAP * 2, keyAreaH, 238, 235, 220);
+for (let k = 0; k < 7; k++) {
+  fillRect(PAD_X + k * KEY_SPACING, PAD_Y, KEY_W, KEY_H, 238, 235, 220);
 }
 
-// Black keys — C# D# F# G# A# (between white keys 0-1, 1-2, 3-4, 4-5, 5-6)
-const BLACK_POS = [0.62, 1.62, 3.62, 4.62, 5.62];
-const blackW = Math.floor(keyW * 0.58);
-const blackH = Math.floor(keyAreaH * 0.60);
-for (const pos of BLACK_POS) {
-  const cx = PAD + pos * keyW + keyW * 0.5 - blackW * 0.5;
-  fillRect(Math.round(cx), PAD, blackW, blackH, 18, 18, 18);
+// Black keys — centered in the gap between adjacent white keys
+// Boundaries: C#(1), D#(2), F#(4), G#(5), A#(6)
+for (const b of [1, 2, 4, 5, 6]) {
+  const rightEdgeOfLeft = PAD_X + (b - 1) * KEY_SPACING + KEY_W;
+  const leftEdgeOfRight = PAD_X + b * KEY_SPACING;
+  const center = (rightEdgeOfLeft + leftEdgeOfRight) / 2;
+  fillRect(Math.round(center - BLACK_W / 2), PAD_Y, BLACK_W, BLACK_H, 18, 18, 18);
 }
 
 // ── Encode as PNG ─────────────────────────────────────────────────────────────
