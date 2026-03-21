@@ -75,6 +75,7 @@ body { display: flex; flex-direction: column; }
 
 .keyboard-scroll {
   flex: 1;
+  max-height: 300px;
   overflow-x: auto; overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
