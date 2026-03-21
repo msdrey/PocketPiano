@@ -2,7 +2,7 @@
 
 An interactive web-based piano that runs in the browser. No frameworks, no build step — just HTML, CSS, and vanilla JavaScript.
 
-**[Live Demo](https://msdrey.github.io/PocketPiano/)**
+**[Live Demo](https://fluffy-belekoy-72e663.netlify.app/)**
 
 ## Features
 
@@ -54,4 +54,4 @@ PocketPiano/
 - Vanilla JavaScript (ES6 modules)
 - Web Audio API
 - Vitest + jsdom for testing
-- GitHub Pages for hosting
+- Netlify for hosting (with per-deploy PR badge via `scripts/gen-pr.js`)
