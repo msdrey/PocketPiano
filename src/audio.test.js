@@ -130,8 +130,9 @@ describe('playNote', () => {
     expect(mockCtx.resume).not.toHaveBeenCalled();
   });
 
-  it('does nothing when ctx is null', () => {
+  it('does nothing when AudioContext is unavailable', () => {
     setContext(null);
+    // getContext() returns null when window.AudioContext is not defined (jsdom)
     expect(() => playNote(60)).not.toThrow();
     setContext(mockCtx);
   });

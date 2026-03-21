@@ -1,16 +1,15 @@
 // ── Audio context ──────────────────────────────────────────────────────────────
 let ctx = null;
 
-export function initAudio() {
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
-  return ctx.resume().then(() => {
-    // Unlock iOS Safari: play a silent buffer on the first user gesture
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-  });
+// Lazily create the AudioContext on first use (must be inside a user gesture so
+// Chrome starts it in 'running' state rather than 'suspended')
+function getContext() {
+  if (!ctx) {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    ctx = new Ctor();
+  }
+  return ctx;
 }
 
 // ── Synthesis (additive sine harmonics) ───────────────────────────────────────
@@ -84,11 +83,11 @@ function scheduleNote(midi) {
 }
 
 export function playNote(midi) {
-  if (!ctx) return;
-  if (ctx.state === 'suspended') {
-    // Wait for context to resume before scheduling — Chrome drops events
-    // scheduled against a stale currentTime from a suspended context
-    ctx.resume().then(() => scheduleNote(midi));
+  const c = getContext();
+  if (!c) return;
+  if (c.state === 'suspended') {
+    // Fallback: context was created outside a user gesture (e.g. tests); resume first
+    c.resume().then(() => scheduleNote(midi));
   } else {
     scheduleNote(midi);
   }
