@@ -45,15 +45,12 @@ body { display: flex; flex-direction: column; }
 @media (orientation: landscape) {
   .header { padding: 5px 20px 4px; }
   .logo { font-size: 15px; }
-  .pr-badge { top: 5px; }
 }
 
 .pr-badge {
-  position: fixed; top: 14px; right: 20px;
   font-family: 'Courier Prime', monospace;
   font-size: 11px; color: var(--gold);
   opacity: 0.4; letter-spacing: 0.1em;
-  z-index: 1000;
 }
 
 /* ── Piano wrapper ── */
@@ -171,5 +168,8 @@ body { display: flex; flex-direction: column; }
   .keyboard-scroll { display: flex; justify-content: center; }
 }
 @media (min-width: 1420px) {
-  .header { padding-left: max(28px, calc((100vw - var(--keyboard-width, 1387px)) / 2)); }
+  .header {
+    padding-left: max(28px, calc((100vw - var(--keyboard-width, 1387px)) / 2));
+    padding-right: max(28px, calc((100vw - var(--keyboard-width, 1387px)) / 2));
+  }
 }

@@ -148,7 +148,12 @@ describe('responsive layout (style.css)', () => {
     expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.keyboard-scroll[^}]*justify-content:\s*center/s);
   });
 
-  it('wide-screen media query (min-width: 1420px) aligns header with keyboard left edge', () => {
+  it('wide-screen media query (min-width: 1420px) aligns header with keyboard edges', () => {
     expect(css).toMatch(/@media[^{]*min-width:\s*1420px[^{]*\{[^}]*\.header[^}]*--keyboard-width/s);
+  });
+
+  it('pr-badge is not fixed-position', () => {
+    const block = css.match(/\.pr-badge\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(block).not.toMatch(/position:\s*fixed/);
   });
 });

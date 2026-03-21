@@ -36,22 +36,10 @@
   initAudio();
   buildKeyboard();
 
-  (async () => {
-    try {
-      const repo = 'msdrey/PocketPiano';
-      const deps = await fetch(`https://api.github.com/repos/${repo}/deployments?environment=github-pages&per_page=5`).then(r => r.json());
-      for (const dep of deps) {
-        const statuses = await fetch(dep.statuses_url).then(r => r.json());
-        if (statuses[0]?.state !== 'success') continue;
-        const prs = await fetch(`https://api.github.com/repos/${repo}/commits/${dep.sha}/pulls`,
-          { headers: { Accept: 'application/vnd.github+json' } }).then(r => r.json());
-        if (Array.isArray(prs) && prs[0]) {
-          document.getElementById('prBadge').textContent = '#' + prs[0].number;
-        }
-        break;
-      }
-    } catch (e) {}
-  })();
+  fetch('/pr.json')
+    .then(r => r.json())
+    .then(({ pr }) => { if (pr) document.getElementById('prBadge').textContent = '#' + pr; })
+    .catch(() => {});
 </script>
 </body>
 </html>
