@@ -9,6 +9,8 @@
   <title>Piano</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Courier+Prime&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon.png" />
 </head>
 <body>
 
@@ -38,6 +40,10 @@
     .then(r => r.json())
     .then(({ pr }) => { if (pr) document.getElementById('prBadge').textContent = '#' + pr; })
     .catch(() => {});
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/serviceWorker.js', { type: 'module' });
+  }
 </script>
 </body>
 </html>
