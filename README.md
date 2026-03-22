@@ -4,6 +4,8 @@ An interactive web-based piano that runs in the browser. No frameworks, no build
 
 **[Live Demo](https://fluffy-belekoy-72e663.netlify.app/)**
 
+![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://fluffy-belekoy-72e663.netlify.app/)
+
 ## Features
 
 - 49-key keyboard (C2–C6)
