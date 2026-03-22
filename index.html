@@ -16,7 +16,14 @@
 
 <div class="header">
   <div class="logo">Pocket<span>Piano</span></div>
-  <div class="pr-badge" id="prBadge"></div>
+  <div class="header-right">
+    <div class="transpose-controls">
+      <button id="transposeDown" class="transpose-btn">−</button>
+      <span id="transposeValue" class="transpose-value">0</span>
+      <button id="transposeUp" class="transpose-btn">+</button>
+    </div>
+    <div class="pr-badge" id="prBadge"></div>
+  </div>
 </div>
 
 <div class="piano-wrapper">
@@ -33,8 +40,10 @@
 
 <script type="module">
   import { buildKeyboard } from './src/keyboard.js';
+  import { initTransposeControls } from './src/transpose.js';
 
   buildKeyboard();
+  initTransposeControls();
 
   fetch('/pr.json')
     .then(r => r.json())
