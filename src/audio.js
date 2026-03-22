@@ -1,5 +1,7 @@
 // ── Audio context ──────────────────────────────────────────────────────────────
 let ctx = null;
+let primed = false;       // true after primeAudio() has run on this context
+let contextReady = false; // true after first note is scheduled on this context
 
 // Lazily create the AudioContext on first use (must be inside a user gesture so
 // Chrome starts it in 'running' state rather than 'suspended')
@@ -12,12 +14,26 @@ function getContext() {
   return ctx;
 }
 
+// Call this at the start of every touch/mouse handler to create the AudioContext
+// and play a silent buffer — this wakes the audio hardware so it is ready by
+// the time the first note is scheduled.
+export function primeAudio() {
+  const c = getContext();
+  if (!c || primed) return;
+  primed = true;
+  const buf = c.createBuffer(1, 1, c.sampleRate);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.connect(c.destination);
+  src.start(0);
+}
+
 // When the page is restored from BFCache (tab closed/reopened), the module's
 // ctx variable still points to the old AudioContext which is now dead.
 // Reset it so the next keypress creates a fresh one.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && ctx) { ctx.close(); ctx = null; }
+    if (e.persisted && ctx) { ctx.close(); ctx = null; primed = false; contextReady = false; }
   });
 }
 
@@ -29,7 +45,8 @@ export function midiToFreq(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
 }
 
-export function setContext(audioCtx) { ctx = audioCtx; }
+// setContext also resets contextReady so tests start from a clean state
+export function setContext(audioCtx) { ctx = audioCtx; primed = false; contextReady = false; }
 
 // Harmonic series: [multiplier, relative amplitude]
 // Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics
@@ -64,7 +81,14 @@ function killNodes(midi) {
 function scheduleNote(midi) {
   killNodes(midi);
   const freq = midiToFreq(midi);
-  const now = ctx.currentTime;
+
+  // First note after context creation: schedule 50ms ahead to let the audio
+  // hardware finish initializing (avoids clicks/artifacts on first play).
+  // primeAudio() has already started a silent buffer to kick-start the hardware.
+  const startDelay = contextReady ? 0 : 0.05;
+  contextReady = true;
+
+  const now = ctx.currentTime + startDelay;
 
   // Decay time scales with pitch: low notes ring longer
   const decayTime = Math.max(0.8, 3.5 - (midi - 36) / 48 * 2.5);

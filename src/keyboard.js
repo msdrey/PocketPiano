@@ -1,4 +1,4 @@
-import { playNote, stopNote } from './audio.js';
+import { playNote, stopNote, primeAudio } from './audio.js';
 
 // ── Keyboard layout ────────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -96,6 +96,7 @@ function keyAt(x, y) {
 const touchMap = {};
 
 document.addEventListener('touchstart', e => {
+  primeAudio();
   for (const t of e.changedTouches) {
     const m = keyAt(t.clientX, t.clientY);
     if (m !== null) {
@@ -134,6 +135,7 @@ document.addEventListener('touchcancel', e => {
 let mouseHeld = false, mouseMidi = null;
 
 document.addEventListener('mousedown', e => {
+  primeAudio();
   mouseHeld = true;
   const m = keyAt(e.clientX, e.clientY);
   if (m !== null) { mouseMidi = m; press(m); }

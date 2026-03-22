@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { midiToFreq, setContext, playNote, stopNote } from './audio.js';
+import { midiToFreq, setContext, playNote, stopNote, primeAudio } from './audio.js';
 
 // ── Web Audio API mock ─────────────────────────────────────────────────────────
 function makeGainNode() {
@@ -28,9 +28,9 @@ function makeOscillator() {
   };
 }
 
-function makeMockCtx({ state = 'running' } = {}) {
+function makeMockCtx({ state = 'running', currentTime = 0 } = {}) {
   return {
-    currentTime: 0,
+    currentTime,
     sampleRate: 44100,
     state,
     destination: {},
@@ -62,6 +62,34 @@ describe('midiToFreq', () => {
 
   it('each octave doubles the frequency', () => {
     expect(midiToFreq(69)).toBe(midiToFreq(57) * 2);
+  });
+});
+
+// ── primeAudio ────────────────────────────────────────────────────────────────
+describe('primeAudio', () => {
+  let mockCtx;
+
+  beforeEach(() => {
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+  });
+
+  it('plays a silent buffer to wake up the audio hardware', () => {
+    primeAudio();
+    expect(mockCtx.createBuffer).toHaveBeenCalledOnce();
+    const src = mockCtx.createBufferSource.mock.results[0].value;
+    expect(src.start).toHaveBeenCalledOnce();
+  });
+
+  it('is idempotent — does not re-prime if called again', () => {
+    primeAudio();
+    primeAudio();
+    expect(mockCtx.createBuffer).toHaveBeenCalledOnce();
+  });
+
+  it('does nothing when ctx is unavailable', () => {
+    setContext(null);
+    expect(() => primeAudio()).not.toThrow();
   });
 });
 
@@ -111,6 +139,23 @@ describe('playNote', () => {
       firstMaster.gain.cancelAndHoldAtTime.mock.calls.length > 0 ||
       firstMaster.gain.cancelScheduledValues.mock.calls.length > 0;
     expect(stopped).toBe(true);
+  });
+
+  it('schedules first note 50ms ahead to let hardware initialize', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    const master = mockCtx.createGain.mock.results[0].value;
+    // setValueAtTime(0, now) where now = currentTime + 0.05
+    expect(master.gain.setValueAtTime).toHaveBeenCalledWith(0, 0.05);
+  });
+
+  it('schedules subsequent notes at currentTime with no offset', () => {
+    mockCtx.currentTime = 1;
+    playNote(60); // first note: scheduled at 1 + 0.05 = 1.05
+    playNote(61); // second note on same context: scheduled at ctx.currentTime = 1 (no offset)
+    // Second note's master is the 9th createGain call (8 per note)
+    const secondMaster = mockCtx.createGain.mock.results[8].value;
+    expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
   it('resumes a suspended context and schedules note after resume resolves (mobile unlock)', async () => {
