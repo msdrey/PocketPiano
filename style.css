@@ -47,6 +47,50 @@ body { display: flex; flex-direction: column; }
   .logo { font-size: 15px; }
 }
 
+.header-right {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.volume-control {
+  display: flex; align-items: center; gap: 5px;
+}
+.volume-icon {
+  fill: var(--gold); stroke: var(--gold);
+  flex-shrink: 0;
+}
+.volume-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 72px; height: 2px;
+  background: rgba(200,169,110,0.35);
+  border-radius: 2px; outline: none; cursor: pointer;
+  touch-action: auto;
+}
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--gold); cursor: pointer;
+}
+.volume-slider::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 50%; border: none;
+  background: var(--gold); cursor: pointer;
+}
+
+.transpose-controls {
+  display: flex; align-items: center; gap: 2px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px; color: var(--gold);
+}
+.transpose-btn {
+  background: none; border: none; color: var(--gold);
+  font-family: 'Courier Prime', monospace; font-size: 14px;
+  cursor: pointer; padding: 2px 5px; line-height: 1;
+  touch-action: auto;
+}
+.transpose-btn:disabled { opacity: 0.2; cursor: default; }
+.transpose-value {
+  min-width: 2.5ch; text-align: center; letter-spacing: 0.1em;
+}
+
 .pr-badge {
   font-family: 'Courier Prime', monospace;
   font-size: 11px; color: var(--gold);

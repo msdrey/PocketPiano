@@ -1,4 +1,5 @@
 import { playNote, stopNote, primeAudio } from './audio.js';
+import { getTranspose } from './transpose.js';
 
 // ── Keyboard layout ────────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -64,19 +65,23 @@ export function buildKeyboard() {
 }
 
 // ── Press / release ────────────────────────────────────────────────────────────
-const pressed = new Set();
+// Map of visual midi → played midi (transpose captured at press time, so release
+// always stops the correct note even if transpose changes while the key is held)
+const pressed = new Map();
 
 function press(midi) {
   if (pressed.has(midi)) return;
-  pressed.add(midi);
-  playNote(midi);
+  const playedMidi = midi + getTranspose();
+  pressed.set(midi, playedMidi);
+  playNote(playedMidi);
   document.querySelector(`[data-midi="${midi}"]`)?.classList.add('pressed');
 }
 
 function release(midi) {
   if (!pressed.has(midi)) return;
+  const playedMidi = pressed.get(midi);
   pressed.delete(midi);
-  stopNote(midi);
+  stopNote(playedMidi);
   document.querySelector(`[data-midi="${midi}"]`)?.classList.remove('pressed');
 }
 
