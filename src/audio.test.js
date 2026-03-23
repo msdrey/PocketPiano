@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { midiToFreq, setContext, playNote, stopNote, primeAudio } from './audio.js';
+import { midiToFreq, setContext, playNote, stopNote, primeAudio, setVolume, getVolume } from './audio.js';
 
 // ── Web Audio API mock ─────────────────────────────────────────────────────────
 function makeGainNode() {
@@ -108,8 +108,8 @@ describe('playNote', () => {
 
   it('creates one gain node per harmonic plus a master', () => {
     playNote(60);
-    // 7 harmonics → 7 per-harmonic gains + 1 master = 8 createGain calls
-    expect(mockCtx.createGain).toHaveBeenCalledTimes(8);
+    // masterGain (1, created lazily on first note) + 1 note master + 7 harmonic gains = 9
+    expect(mockCtx.createGain).toHaveBeenCalledTimes(9);
   });
 
   it('creates one oscillator per harmonic (7)', () => {
@@ -125,14 +125,16 @@ describe('playNote', () => {
 
   it('sets master gain attack envelope', () => {
     playNote(60);
-    const master = mockCtx.createGain.mock.results[0].value;
+    // results[0] = masterGain (destination node), results[1] = note master
+    const master = mockCtx.createGain.mock.results[1].value;
     expect(master.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     expect(master.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.28, expect.any(Number));
   });
 
   it('retrigger holds or cancels old gain before starting fresh', () => {
     playNote(60);
-    const firstMaster = mockCtx.createGain.mock.results[0].value;
+    // results[0] = masterGain, results[1] = note master for first playNote(60)
+    const firstMaster = mockCtx.createGain.mock.results[1].value;
     playNote(60); // retrigger
     // killNodes uses cancelAndHoldAtTime when available (our click fix), falls back to cancelScheduledValues
     const stopped =
@@ -144,7 +146,8 @@ describe('playNote', () => {
   it('schedules first note 50ms ahead to let hardware initialize', () => {
     mockCtx.currentTime = 0;
     playNote(60);
-    const master = mockCtx.createGain.mock.results[0].value;
+    // results[0] = masterGain, results[1] = note master
+    const master = mockCtx.createGain.mock.results[1].value;
     // setValueAtTime(0, now) where now = currentTime + 0.05
     expect(master.gain.setValueAtTime).toHaveBeenCalledWith(0, 0.05);
   });
@@ -153,8 +156,9 @@ describe('playNote', () => {
     mockCtx.currentTime = 1;
     playNote(60); // first note: scheduled at 1 + 0.05 = 1.05
     playNote(61); // second note on same context: scheduled at ctx.currentTime = 1 (no offset)
-    // Second note's master is the 9th createGain call (8 per note)
-    const secondMaster = mockCtx.createGain.mock.results[8].value;
+    // results[0]=masterGain, results[1]=note master 60, results[2-8]=harmonics 60
+    // results[9]=note master 61 (masterGain already exists, not recreated)
+    const secondMaster = mockCtx.createGain.mock.results[9].value;
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
@@ -183,6 +187,39 @@ describe('playNote', () => {
   });
 });
 
+describe('setVolume / getVolume', () => {
+  let mockCtx;
+
+  beforeEach(() => {
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+    setVolume(1.0); // reset to default
+  });
+
+  it('getVolume returns 1.0 by default', () => {
+    expect(getVolume()).toBe(1.0);
+  });
+
+  it('setVolume updates getVolume', () => {
+    setVolume(0.5);
+    expect(getVolume()).toBe(0.5);
+  });
+
+  it('setVolume applies immediately to existing masterGain', () => {
+    playNote(60); // creates masterGain
+    const masterGainNode = mockCtx.createGain.mock.results[0].value;
+    setVolume(0.3);
+    expect(masterGainNode.gain.value).toBe(0.3);
+  });
+
+  it('setVolume is applied to masterGain when first note is played', () => {
+    setVolume(0.6);
+    playNote(60);
+    const masterGainNode = mockCtx.createGain.mock.results[0].value;
+    expect(masterGainNode.gain.value).toBe(0.6);
+  });
+});
+
 describe('stopNote', () => {
   let mockCtx;
 
@@ -197,7 +234,8 @@ describe('stopNote', () => {
 
   it('fades master gain to zero on release', () => {
     playNote(60);
-    const master = mockCtx.createGain.mock.results[0].value;
+    // results[0] = masterGain, results[1] = note master
+    const master = mockCtx.createGain.mock.results[1].value;
     stopNote(60);
     expect(master.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
   });

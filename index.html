@@ -17,6 +17,9 @@
 <div class="header">
   <div class="logo">Pocket<span>Piano</span></div>
   <div class="header-right">
+    <div class="volume-control">
+      <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="100" />
+    </div>
     <div class="transpose-controls">
       <button id="transposeDown" class="transpose-btn">−</button>
       <span id="transposeValue" class="transpose-value">0</span>
@@ -41,9 +44,11 @@
 <script type="module">
   import { buildKeyboard } from './src/keyboard.js';
   import { initTransposeControls } from './src/transpose.js';
+  import { initVolumeControl } from './src/volume.js';
 
   buildKeyboard();
   initTransposeControls();
+  initVolumeControl();
 
   fetch('/pr.json')
     .then(r => r.json())

@@ -2,6 +2,15 @@
 let ctx = null;
 let primed = false;       // true after primeAudio() has run on this context
 let contextReady = false; // true after first note is scheduled on this context
+let masterGain = null;    // single GainNode wired to destination; created lazily on first note
+let volume = 1.0;         // desired volume, applied to masterGain when it exists
+
+export function getVolume() { return volume; }
+
+export function setVolume(v) {
+  volume = v;
+  if (masterGain) masterGain.gain.value = v;
+}
 
 // Lazily create the AudioContext on first use (must be inside a user gesture so
 // Chrome starts it in 'running' state rather than 'suspended')
@@ -33,7 +42,7 @@ export function primeAudio() {
 // Reset it so the next keypress creates a fresh one.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && ctx) { ctx.close(); ctx = null; primed = false; contextReady = false; }
+    if (e.persisted && ctx) { ctx.close(); ctx = null; masterGain = null; primed = false; contextReady = false; }
   });
 }
 
@@ -46,7 +55,7 @@ export function midiToFreq(m) {
 }
 
 // setContext also resets contextReady so tests start from a clean state
-export function setContext(audioCtx) { ctx = audioCtx; primed = false; contextReady = false; }
+export function setContext(audioCtx) { ctx = audioCtx; masterGain = null; primed = false; contextReady = false; }
 
 // Harmonic series: [multiplier, relative amplitude]
 // Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics
@@ -80,6 +89,14 @@ function killNodes(midi) {
 
 function scheduleNote(midi) {
   killNodes(midi);
+
+  // Lazily create the master gain node (once per context lifetime)
+  if (!masterGain) {
+    masterGain = ctx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(ctx.destination);
+  }
+
   const freq = midiToFreq(midi);
 
   // First note after context creation: schedule 50ms ahead to let the audio
@@ -111,7 +128,7 @@ function scheduleNote(midi) {
     return osc;
   });
 
-  master.connect(ctx.destination);
+  master.connect(masterGain);
   activeNodes[midi] = { oscs, master };
 }
 
