@@ -53,7 +53,6 @@ body { display: flex; flex-direction: column; }
 
 .volume-control {
   display: flex; align-items: center; gap: 5px;
-  opacity: 0.4;
 }
 .volume-icon {
   fill: var(--gold); stroke: var(--gold);
@@ -62,7 +61,7 @@ body { display: flex; flex-direction: column; }
 .volume-slider {
   -webkit-appearance: none; appearance: none;
   width: 72px; height: 2px;
-  background: rgba(200,169,110,0.5);
+  background: rgba(200,169,110,0.35);
   border-radius: 2px; outline: none; cursor: pointer;
   touch-action: auto;
 }
@@ -79,7 +78,7 @@ body { display: flex; flex-direction: column; }
 .transpose-controls {
   display: flex; align-items: center; gap: 2px;
   font-family: 'Courier Prime', monospace;
-  font-size: 11px; color: var(--gold); opacity: 0.4;
+  font-size: 11px; color: var(--gold);
 }
 .transpose-btn {
   background: none; border: none; color: var(--gold);
@@ -87,7 +86,7 @@ body { display: flex; flex-direction: column; }
   cursor: pointer; padding: 2px 5px; line-height: 1;
   touch-action: auto;
 }
-.transpose-btn:disabled { opacity: 0.25; cursor: default; }
+.transpose-btn:disabled { opacity: 0.2; cursor: default; }
 .transpose-value {
   min-width: 2.5ch; text-align: center; letter-spacing: 0.1em;
 }
