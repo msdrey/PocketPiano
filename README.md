@@ -63,6 +63,16 @@ PocketPiano/
     └── serviceWorker.test.js
 ```
 
+## PWA & Offline Support
+
+PocketPiano is a Progressive Web App (PWA). It can be installed to the home screen on mobile and desktop, and it works fully offline after the first visit.
+
+### Why a service worker?
+
+A piano needs to be instantly responsive — any latency between a key press and sound is noticeable. On mobile browsers especially, a network round-trip on first load (or when the connection is flaky) would cause audio to stutter or the app to fail entirely. The service worker solves this by pre-caching all app assets on install, so subsequent loads are served straight from the local cache with zero network dependency.
+
+The strategy used is **network-first**: when online the browser always fetches the latest version and updates the cache; when offline it falls back to whatever was cached. This means you never see a stale version while connected, but the app still works on a plane or underground.
+
 ## Installing the App (PWA)
 
 You can install PocketPiano to your home screen for a full-screen, offline experience.
@@ -91,16 +101,6 @@ You can install PocketPiano to your home screen for a full-screen, offline exper
 4. The app opens in its own window and is available from your taskbar / Applications folder.
 
 ---
-
-## PWA & Offline Support
-
-PocketPiano is a Progressive Web App (PWA). It can be installed to the home screen on mobile and desktop, and it works fully offline after the first visit.
-
-### Why a service worker?
-
-A piano needs to be instantly responsive — any latency between a key press and sound is noticeable. On mobile browsers especially, a network round-trip on first load (or when the connection is flaky) would cause audio to stutter or the app to fail entirely. The service worker solves this by pre-caching all app assets on install, so subsequent loads are served straight from the local cache with zero network dependency.
-
-The strategy used is **network-first**: when online the browser always fetches the latest version and updates the cache; when offline it falls back to whatever was cached. This means you never see a stale version while connected, but the app still works on a plane or underground.
 
 ## Tech Stack
 
