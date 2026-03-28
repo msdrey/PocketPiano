@@ -151,11 +151,12 @@ export function playNote(midi) {
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
   const { oscs, master } = activeNodes[midi];
-  // Check before deleting: if other notes are currently sounding (active or
-  // still fading from a previous slide step), use a short release to prevent
-  // oscillator pile-up. Isolated single notes always get the natural 300ms fade.
-  const otherNotesPlaying =
-    Object.keys(activeNodes).length > 1 || Object.keys(fadingNodes).length > 0;
+  // Check before deleting: if 4 or more notes are currently sounding (active or
+  // fading), use a short release to prevent oscillator pile-up from fast slides.
+  // A threshold of 4 lets normal human-speed playing always get the full 300ms
+  // release, while only kicking in during rapid slides where pile-up causes clicks.
+  const soundingCount = Object.keys(activeNodes).length + Object.keys(fadingNodes).length;
+  const otherNotesPlaying = soundingCount >= 4;
   delete activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {

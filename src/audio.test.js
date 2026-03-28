@@ -255,27 +255,26 @@ describe('stopNote', () => {
     expect(releaseCall[1]).toBeCloseTo(0 + 0.3, 5);
   });
 
-  it('uses short 30ms release when another note is active (slide scenario)', () => {
-    mockCtx.currentTime = 0;
-    playNote(60);
-    playNote(62); // second note still active
-    stopNote(60); // activeNodes.length === 2 before delete → otherNotesPlaying = true
-    // results[0]=masterGain, results[1]=note master 60
-    const master60 = mockCtx.createGain.mock.results[1].value;
-    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
-    expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
-  });
-
-  it('uses short 30ms release when fading notes exist (slide already in progress)', () => {
+  it('uses full 300ms release when fewer than 4 notes are sounding', () => {
     mockCtx.currentTime = 0;
     playNote(60);
     playNote(61);
-    stopNote(60); // moves 60 to fadingNodes
-    stopNote(61); // activeNodes now empty, but fadingNodes has 60 → short release
-    // results[0]=masterGain, results[1]=note master 60, results[2-9]=8 harmonic gains for 60
-    // results[10] = note master 61
-    const master61 = mockCtx.createGain.mock.results[10].value;
-    const releaseCall = master61.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    playNote(62); // 3 active notes — below threshold
+    stopNote(60); // soundingCount === 3 < 4 → full release
+    const master60 = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.3, 5);
+  });
+
+  it('uses short 30ms release when 4 or more notes are sounding (fast slide)', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    playNote(61);
+    playNote(62);
+    playNote(63); // 4 active notes — at threshold
+    stopNote(60); // soundingCount === 4 >= 4 → short release
+    const master60 = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
     expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
   });
 });
