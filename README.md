@@ -12,6 +12,9 @@ An interactive web-based piano that runs in the browser. No frameworks, no build
 - Realistic sound via Web Audio API additive synthesis
 - Mouse and multi-touch support
 - Scrollable keyboard with a slider control
+- Volume control
+- Transpose control (shift pitch up/down)
+- Per-deploy PR badge
 - Fully responsive layout (portrait and landscape)
 
 ## Getting Started
@@ -44,11 +47,19 @@ npm test
 PocketPiano/
 ├── index.html
 ├── style.css
+├── scripts/
+│   └── gen-pr.js       # Generates pr.json for the PR badge on Netlify deploys
 └── src/
     ├── audio.js        # Web Audio synthesis and note playback
     ├── audio.test.js
     ├── keyboard.js     # Keyboard DOM and touch/mouse event handling
-    └── keyboard.test.js
+    ├── keyboard.test.js
+    ├── transpose.js    # Transpose controls (pitch shift up/down)
+    ├── transpose.test.js
+    ├── volume.js       # Volume control
+    ├── volume.test.js
+    ├── serviceWorker.js # PWA service worker
+    └── serviceWorker.test.js
 ```
 
 ## Tech Stack
