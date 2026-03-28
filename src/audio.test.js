@@ -245,4 +245,29 @@ describe('stopNote', () => {
     stopNote(60);
     expect(() => stopNote(60)).not.toThrow();
   });
+
+  it('uses short release for a note stopped very soon after start (slide artifact fix)', () => {
+    // First note: contextReady=false → startDelay=0.05, so startTime = 0 + 0.05 = 0.05
+    mockCtx.currentTime = 0;
+    playNote(60);
+    // Simulate stopping 10ms after the note actually started (age = 0.01s)
+    mockCtx.currentTime = 0.06;
+    stopNote(60);
+    const master = mockCtx.createGain.mock.results[1].value;
+    // The release linearRamp to 0 should target now + releaseTime
+    // age = 0.06 - 0.05 = 0.01 → releaseTime = max(0.03, 0.01 * 0.8) = 0.03
+    const releaseCall = master.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0.06 + 0.03, 5);
+  });
+
+  it('uses full 300ms release for notes held longer than 150ms', () => {
+    mockCtx.currentTime = 0;
+    playNote(60); // startTime = 0.05 (first note delay)
+    mockCtx.currentTime = 1.0; // held for ~950ms
+    stopNote(60);
+    const master = mockCtx.createGain.mock.results[1].value;
+    // age = 1.0 - 0.05 = 0.95 → >= 0.15, so releaseTime = 0.3
+    const releaseCall = master.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(1.0 + 0.3, 5);
+  });
 });

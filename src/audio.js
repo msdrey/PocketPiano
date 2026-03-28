@@ -129,7 +129,7 @@ function scheduleNote(midi) {
   });
 
   master.connect(masterGain);
-  activeNodes[midi] = { oscs, master };
+  activeNodes[midi] = { oscs, master, startTime: now };
 }
 
 export function playNote(midi) {
@@ -145,7 +145,7 @@ export function playNote(midi) {
 
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
-  const { oscs, master } = activeNodes[midi];
+  const { oscs, master, startTime } = activeNodes[midi];
   delete activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {
@@ -154,10 +154,15 @@ export function stopNote(midi) {
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(master.gain.value, now);
   }
-  master.gain.linearRampToValueAtTime(0, now + 0.3);
+  // Notes released quickly (during a fast slide) get a shorter fade to prevent
+  // oscillator pile-up: many 300ms tails simultaneously overload the CPU and
+  // cause buffer underruns that manifest as click artifacts.
+  const age = now - (startTime ?? now);
+  const releaseTime = age < 0.15 ? Math.max(0.03, age * 0.8) : 0.3;
+  master.gain.linearRampToValueAtTime(0, now + releaseTime);
   fadingNodes[midi] = { oscs, master };
   setTimeout(() => {
     oscs.forEach(o => { try { o.stop(); } catch (e) {} });
     delete fadingNodes[midi];
-  }, 400);
+  }, (releaseTime + 0.1) * 1000);
 }
