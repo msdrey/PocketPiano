@@ -73,6 +73,35 @@ A piano needs to be instantly responsive — any latency between a key press and
 
 The strategy used is **network-first**: when online the browser always fetches the latest version and updates the cache; when offline it falls back to whatever was cached. This means you never see a stale version while connected, but the app still works on a plane or underground.
 
+## Installing the App (PWA)
+
+You can install PocketPiano to your home screen for a full-screen, offline experience.
+
+### iPhone / iPad (Safari)
+
+1. Open the [live link](https://fluffy-belekoy-72e663.netlify.app/) in **Safari** (other browsers on iOS don't support PWA install).
+2. Tap the **Share** button (the box with an arrow pointing up) at the bottom of the screen.
+3. Scroll down and tap **Add to Home Screen**.
+4. Edit the name if you like, then tap **Add**.
+5. The app icon will appear on your home screen. Open it from there for a full-screen experience with no browser chrome.
+
+### Android (Chrome)
+
+1. Open the [live link](https://fluffy-belekoy-72e663.netlify.app/) in **Chrome**.
+2. Tap the **three-dot menu** (⋮) in the top-right corner.
+3. Tap **Add to Home screen** (or **Install app** if shown as a banner).
+4. Confirm by tapping **Add** / **Install**.
+5. The app will appear in your app drawer and home screen.
+
+### Desktop (Chrome / Edge)
+
+1. Open the [live link](https://fluffy-belekoy-72e663.netlify.app/) in Chrome or Edge.
+2. Click the **install icon** (⊕) in the address bar on the right side.
+3. Click **Install** in the prompt.
+4. The app opens in its own window and is available from your taskbar / Applications folder.
+
+---
+
 ## Tech Stack
 
 - Vanilla JavaScript (ES6 modules)
