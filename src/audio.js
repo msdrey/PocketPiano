@@ -62,15 +62,16 @@ export function setContext(audioCtx) {
 }
 
 // Harmonic series: [multiplier, relative amplitude]
-// Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics
+// Brighter grand piano tone: boosted 3rd–8th harmonics for presence and sparkle
 const HARMONICS = [
   [1, 1.00],
-  [2, 0.45],
-  [3, 0.20],
-  [4, 0.10],
-  [5, 0.06],
-  [6, 0.03],
-  [7, 0.02],
+  [2, 0.40],
+  [3, 0.28],
+  [4, 0.16],
+  [5, 0.11],
+  [6, 0.07],
+  [7, 0.05],
+  [8, 0.03],
 ];
 
 function killNodes(midi) {

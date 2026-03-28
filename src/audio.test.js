@@ -108,13 +108,13 @@ describe('playNote', () => {
 
   it('creates one gain node per harmonic plus a master', () => {
     playNote(60);
-    // masterGain (1, created lazily on first note) + 1 note master + 7 harmonic gains = 9
-    expect(mockCtx.createGain).toHaveBeenCalledTimes(9);
+    // masterGain (1, created lazily on first note) + 1 note master + 8 harmonic gains = 10
+    expect(mockCtx.createGain).toHaveBeenCalledTimes(10);
   });
 
-  it('creates one oscillator per harmonic (7)', () => {
+  it('creates one oscillator per harmonic (8)', () => {
     playNote(60);
-    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(7);
+    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(8);
   });
 
   it('starts all oscillators', () => {
@@ -156,9 +156,9 @@ describe('playNote', () => {
     mockCtx.currentTime = 1;
     playNote(60); // first note: scheduled at 1 + 0.05 = 1.05
     playNote(61); // second note on same context: scheduled at ctx.currentTime = 1 (no offset)
-    // results[0]=masterGain, results[1]=note master 60, results[2-8]=harmonics 60
-    // results[9]=note master 61 (masterGain already exists, not recreated)
-    const secondMaster = mockCtx.createGain.mock.results[9].value;
+    // results[0]=masterGain, results[1]=note master 60, results[2-9]=harmonics 60 (8 harmonics)
+    // results[10]=note master 61 (masterGain already exists, not recreated)
+    const secondMaster = mockCtx.createGain.mock.results[10].value;
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
@@ -170,7 +170,7 @@ describe('playNote', () => {
     // Oscillators not yet created — scheduling happens after resume() resolves
     expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
     await suspendedCtx.resume.mock.results[0].value; // flush promise
-    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(7);
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
     setContext(mockCtx);
   });
 
@@ -272,8 +272,9 @@ describe('stopNote', () => {
     playNote(61);
     stopNote(60); // moves 60 to fadingNodes
     stopNote(61); // activeNodes now empty, but fadingNodes has 60 → short release
-    // results[9] = note master 61
-    const master61 = mockCtx.createGain.mock.results[9].value;
+    // results[0]=masterGain, results[1]=note master 60, results[2-9]=8 harmonic gains for 60
+    // results[10] = note master 61
+    const master61 = mockCtx.createGain.mock.results[10].value;
     const releaseCall = master61.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
     expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
   });
