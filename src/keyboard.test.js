@@ -124,8 +124,8 @@ describe('responsive layout (style.css)', () => {
     expect(css).toMatch(/\.keyboard-scroll\s*\{[^}]*max-height:\s*300px/);
   });
 
-  it('rail has compact height of 60px', () => {
-    expect(css).toMatch(/\.rail\s*\{[^}]*height:\s*60px/);
+  it('rail height accounts for safe-area-inset-bottom', () => {
+    expect(css).toMatch(/\.rail\s*\{[^}]*height:\s*calc\(60px \+ env\(safe-area-inset-bottom/);
   });
 
   it('landscape media query shrinks header padding', () => {
