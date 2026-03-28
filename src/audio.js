@@ -66,7 +66,7 @@ export function setContext(audioCtx) {
 const HARMONICS = [
   [1, 1.00],
   [2, 0.40],
-  [3, 0.22],
+  [3, 0.20],
   [4, 0.16],
   [5, 0.11],
   [6, 0.07],
