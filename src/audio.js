@@ -54,19 +54,24 @@ export function midiToFreq(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
 }
 
-// setContext also resets contextReady so tests start from a clean state
-export function setContext(audioCtx) { ctx = audioCtx; masterGain = null; primed = false; contextReady = false; }
+// setContext resets all per-context state so tests start from a clean slate
+export function setContext(audioCtx) {
+  ctx = audioCtx; masterGain = null; primed = false; contextReady = false;
+  for (const k of Object.keys(activeNodes)) delete activeNodes[k];
+  for (const k of Object.keys(fadingNodes)) delete fadingNodes[k];
+}
 
 // Harmonic series: [multiplier, relative amplitude]
-// Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics
+// Brighter grand piano tone: boosted 3rd–8th harmonics for presence and sparkle
 const HARMONICS = [
   [1, 1.00],
-  [2, 0.45],
+  [2, 0.40],
   [3, 0.20],
-  [4, 0.10],
-  [5, 0.06],
-  [6, 0.03],
-  [7, 0.02],
+  [4, 0.16],
+  [5, 0.11],
+  [6, 0.07],
+  [7, 0.05],
+  [8, 0.03],
 ];
 
 function killNodes(midi) {
@@ -146,6 +151,12 @@ export function playNote(midi) {
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
   const { oscs, master } = activeNodes[midi];
+  // Check before deleting: if 4 or more notes are currently sounding (active or
+  // fading), use a short release to prevent oscillator pile-up from fast slides.
+  // A threshold of 4 lets normal human-speed playing always get the full 300ms
+  // release, while only kicking in during rapid slides where pile-up causes clicks.
+  const soundingCount = Object.keys(activeNodes).length + Object.keys(fadingNodes).length;
+  const otherNotesPlaying = soundingCount >= 4;
   delete activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {
@@ -154,10 +165,11 @@ export function stopNote(midi) {
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(master.gain.value, now);
   }
-  master.gain.linearRampToValueAtTime(0, now + 0.3);
+  const releaseTime = otherNotesPlaying ? 0.03 : 0.3;
+  master.gain.linearRampToValueAtTime(0, now + releaseTime);
   fadingNodes[midi] = { oscs, master };
   setTimeout(() => {
     oscs.forEach(o => { try { o.stop(); } catch (e) {} });
     delete fadingNodes[midi];
-  }, 400);
+  }, (releaseTime + 0.1) * 1000);
 }

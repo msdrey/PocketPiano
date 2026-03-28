@@ -108,13 +108,13 @@ describe('playNote', () => {
 
   it('creates one gain node per harmonic plus a master', () => {
     playNote(60);
-    // masterGain (1, created lazily on first note) + 1 note master + 7 harmonic gains = 9
-    expect(mockCtx.createGain).toHaveBeenCalledTimes(9);
+    // masterGain (1, created lazily on first note) + 1 note master + 8 harmonic gains = 10
+    expect(mockCtx.createGain).toHaveBeenCalledTimes(10);
   });
 
-  it('creates one oscillator per harmonic (7)', () => {
+  it('creates one oscillator per harmonic (8)', () => {
     playNote(60);
-    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(7);
+    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(8);
   });
 
   it('starts all oscillators', () => {
@@ -156,9 +156,9 @@ describe('playNote', () => {
     mockCtx.currentTime = 1;
     playNote(60); // first note: scheduled at 1 + 0.05 = 1.05
     playNote(61); // second note on same context: scheduled at ctx.currentTime = 1 (no offset)
-    // results[0]=masterGain, results[1]=note master 60, results[2-8]=harmonics 60
-    // results[9]=note master 61 (masterGain already exists, not recreated)
-    const secondMaster = mockCtx.createGain.mock.results[9].value;
+    // results[0]=masterGain, results[1]=note master 60, results[2-9]=harmonics 60 (8 harmonics)
+    // results[10]=note master 61 (masterGain already exists, not recreated)
+    const secondMaster = mockCtx.createGain.mock.results[10].value;
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
@@ -170,7 +170,7 @@ describe('playNote', () => {
     // Oscillators not yet created — scheduling happens after resume() resolves
     expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
     await suspendedCtx.resume.mock.results[0].value; // flush promise
-    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(7);
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
     setContext(mockCtx);
   });
 
@@ -244,5 +244,37 @@ describe('stopNote', () => {
     playNote(60);
     stopNote(60);
     expect(() => stopNote(60)).not.toThrow();
+  });
+
+  it('uses full 300ms release for an isolated note with no other notes playing', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    stopNote(60); // only note; fadingNodes empty → full release
+    const master = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.3, 5);
+  });
+
+  it('uses full 300ms release when fewer than 4 notes are sounding', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    playNote(61);
+    playNote(62); // 3 active notes — below threshold
+    stopNote(60); // soundingCount === 3 < 4 → full release
+    const master60 = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.3, 5);
+  });
+
+  it('uses short 30ms release when 4 or more notes are sounding (fast slide)', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    playNote(61);
+    playNote(62);
+    playNote(63); // 4 active notes — at threshold
+    stopNote(60); // soundingCount === 4 >= 4 → short release
+    const master60 = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
   });
 });

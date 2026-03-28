@@ -60,7 +60,17 @@
     .catch(() => {});
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/serviceWorker.js', { type: 'module' });
+    // updateViaCache:'none' ensures the SW script is always fetched from the network,
+    // never from the browser's HTTP cache, so new deploys are detected immediately.
+    navigator.serviceWorker.register('/serviceWorker.js', { type: 'module', updateViaCache: 'none' })
+      .then(reg => reg.update()); // proactively check for an updated SW on every page load
+
+    // When a new SW takes control (skipWaiting + clients.claim), reload so the page
+    // gets fresh JS modules rather than running stale in-memory code.
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!reloading) { reloading = true; window.location.reload(); }
+    });
   }
 </script>
 </body>
