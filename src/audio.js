@@ -54,8 +54,12 @@ export function midiToFreq(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
 }
 
-// setContext also resets contextReady so tests start from a clean state
-export function setContext(audioCtx) { ctx = audioCtx; masterGain = null; primed = false; contextReady = false; }
+// setContext resets all per-context state so tests start from a clean slate
+export function setContext(audioCtx) {
+  ctx = audioCtx; masterGain = null; primed = false; contextReady = false;
+  for (const k of Object.keys(activeNodes)) delete activeNodes[k];
+  for (const k of Object.keys(fadingNodes)) delete fadingNodes[k];
+}
 
 // Harmonic series: [multiplier, relative amplitude]
 // Mimics a mellow grand piano tone — strong fundamental, soft upper harmonics
@@ -129,7 +133,7 @@ function scheduleNote(midi) {
   });
 
   master.connect(masterGain);
-  activeNodes[midi] = { oscs, master, startTime: now };
+  activeNodes[midi] = { oscs, master };
 }
 
 export function playNote(midi) {
@@ -145,7 +149,12 @@ export function playNote(midi) {
 
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
-  const { oscs, master, startTime } = activeNodes[midi];
+  const { oscs, master } = activeNodes[midi];
+  // Check before deleting: if other notes are currently sounding (active or
+  // still fading from a previous slide step), use a short release to prevent
+  // oscillator pile-up. Isolated single notes always get the natural 300ms fade.
+  const otherNotesPlaying =
+    Object.keys(activeNodes).length > 1 || Object.keys(fadingNodes).length > 0;
   delete activeNodes[midi];
   const now = ctx.currentTime;
   if (master.gain.cancelAndHoldAtTime) {
@@ -154,11 +163,7 @@ export function stopNote(midi) {
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(master.gain.value, now);
   }
-  // Notes released quickly (during a fast slide) get a shorter fade to prevent
-  // oscillator pile-up: many 300ms tails simultaneously overload the CPU and
-  // cause buffer underruns that manifest as click artifacts.
-  const age = now - (startTime ?? now);
-  const releaseTime = age < 0.15 ? Math.max(0.03, age * 0.8) : 0.3;
+  const releaseTime = otherNotesPlaying ? 0.03 : 0.3;
   master.gain.linearRampToValueAtTime(0, now + releaseTime);
   fadingNodes[midi] = { oscs, master };
   setTimeout(() => {

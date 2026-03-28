@@ -246,28 +246,35 @@ describe('stopNote', () => {
     expect(() => stopNote(60)).not.toThrow();
   });
 
-  it('uses short release for a note stopped very soon after start (slide artifact fix)', () => {
-    // First note: contextReady=false → startDelay=0.05, so startTime = 0 + 0.05 = 0.05
+  it('uses full 300ms release for an isolated note with no other notes playing', () => {
     mockCtx.currentTime = 0;
     playNote(60);
-    // Simulate stopping 10ms after the note actually started (age = 0.01s)
-    mockCtx.currentTime = 0.06;
-    stopNote(60);
+    stopNote(60); // only note; fadingNodes empty → full release
     const master = mockCtx.createGain.mock.results[1].value;
-    // The release linearRamp to 0 should target now + releaseTime
-    // age = 0.06 - 0.05 = 0.01 → releaseTime = max(0.03, 0.01 * 0.8) = 0.03
     const releaseCall = master.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
-    expect(releaseCall[1]).toBeCloseTo(0.06 + 0.03, 5);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.3, 5);
   });
 
-  it('uses full 300ms release for notes held longer than 150ms', () => {
+  it('uses short 30ms release when another note is active (slide scenario)', () => {
     mockCtx.currentTime = 0;
-    playNote(60); // startTime = 0.05 (first note delay)
-    mockCtx.currentTime = 1.0; // held for ~950ms
-    stopNote(60);
-    const master = mockCtx.createGain.mock.results[1].value;
-    // age = 1.0 - 0.05 = 0.95 → >= 0.15, so releaseTime = 0.3
-    const releaseCall = master.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
-    expect(releaseCall[1]).toBeCloseTo(1.0 + 0.3, 5);
+    playNote(60);
+    playNote(62); // second note still active
+    stopNote(60); // activeNodes.length === 2 before delete → otherNotesPlaying = true
+    // results[0]=masterGain, results[1]=note master 60
+    const master60 = mockCtx.createGain.mock.results[1].value;
+    const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
+  });
+
+  it('uses short 30ms release when fading notes exist (slide already in progress)', () => {
+    mockCtx.currentTime = 0;
+    playNote(60);
+    playNote(61);
+    stopNote(60); // moves 60 to fadingNodes
+    stopNote(61); // activeNodes now empty, but fadingNodes has 60 → short release
+    // results[9] = note master 61
+    const master61 = mockCtx.createGain.mock.results[9].value;
+    const releaseCall = master61.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
+    expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
   });
 });
