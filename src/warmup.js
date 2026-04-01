@@ -20,7 +20,7 @@ const BPM_STEP = 4;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let lowestMidi  = 45; // A2
-let highestMidi = 57; // A3
+let highestMidi = 69; // A4
 let patternKey  = 'arpeggio';
 let bpm         = 120;
 
@@ -275,7 +275,7 @@ export function resetWarmup() {
   clearTimeout(timerId);
   timerId     = null;
   lowestMidi  = 45;
-  highestMidi = 57;
+  highestMidi = 69;
   patternKey  = 'arpeggio';
   bpm         = 120;
   isPlaying   = false;
