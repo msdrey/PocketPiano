@@ -207,9 +207,11 @@ body { display: flex; flex-direction: column; }
 }
 
 @media (orientation: portrait) {
-  /* Let piano-wrapper shrink to its natural height so the warm-up section
-     can occupy whatever space remains below it. */
-  .piano-wrapper { flex: 0 0 auto; }
+  /* Give piano-wrapper an explicit height so keyboard-scroll (flex:1 inside)
+     has a parent height to expand into. min() keeps it from consuming too much
+     on short phones.
+     lid=18px + keyboard up to 300px + rail=60px → 378px max */
+  .piano-wrapper { flex: 0 0 min(378px, 48vh); }
 
   #warmup-section {
     display: flex; flex-direction: column;
