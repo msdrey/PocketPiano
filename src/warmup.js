@@ -12,15 +12,27 @@ const CHORD_OFFSETS = [0, 4, 7]; // major triad: root, M3, P5
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const WARMUP_LOW  = 36; // C2 – lowest selectable note
-const WARMUP_HIGH = 72; // C5 – highest selectable note
+const WARMUP_HIGH = 84; // C6 – highest selectable note (covers soprano)
 
 const BPM_MIN = 40;
 const BPM_MAX = 160;
 const BPM_STEP = 4;
 
+// ── Voice presets ─────────────────────────────────────────────────────────────
+// lowest = lowest root note (From); highest = highest *sung* note (To)
+export const VOICE_PRESETS = {
+  bass:     { lowest: 40, highest: 64 }, // E2 – E4
+  baritone: { lowest: 45, highest: 69 }, // A2 – A4
+  tenor:    { lowest: 48, highest: 72 }, // C3 – C5
+  alto:     { lowest: 53, highest: 77 }, // F3 – F5
+  mezzo:    { lowest: 57, highest: 81 }, // A3 – A5
+  soprano:  { lowest: 60, highest: 84 }, // C4 – C6
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let lowestMidi  = 45; // A2
 let highestMidi = 69; // A4
+let voicePreset = 'baritone';
 let patternKey  = 'arpeggio';
 let bpm         = 120;
 
@@ -213,10 +225,11 @@ function updateBpmDisplay() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export function initWarmup() {
-  // Populate note selectors
+  const voiceSel   = document.getElementById('warmupVoice');
   const lowestSel  = document.getElementById('warmupLowest');
   const highestSel = document.getElementById('warmupHighest');
 
+  // Populate note selectors
   for (let m = WARMUP_LOW; m <= WARMUP_HIGH; m++) {
     const lbl = midiLabel(m);
     lowestSel.appendChild(new Option(lbl, m));
@@ -224,9 +237,25 @@ export function initWarmup() {
   }
   lowestSel.value  = lowestMidi;
   highestSel.value = highestMidi;
+  voiceSel.value   = voicePreset;
 
+  // Selecting a preset snaps both note pickers to the preset values
+  voiceSel.addEventListener('change', () => {
+    voicePreset = voiceSel.value;
+    const preset = VOICE_PRESETS[voicePreset];
+    if (preset) {
+      lowestMidi = preset.lowest;
+      highestMidi = preset.highest;
+      lowestSel.value  = lowestMidi;
+      highestSel.value = highestMidi;
+    }
+  });
+
+  // Manually tweaking either note picker switches to Custom
   lowestSel.addEventListener('change', () => {
     lowestMidi = +lowestSel.value;
+    voicePreset = 'custom';
+    voiceSel.value = 'custom';
     if (lowestMidi >= highestMidi) {
       highestMidi = lowestMidi + 1;
       highestSel.value = highestMidi;
@@ -234,6 +263,8 @@ export function initWarmup() {
   });
   highestSel.addEventListener('change', () => {
     highestMidi = +highestSel.value;
+    voicePreset = 'custom';
+    voiceSel.value = 'custom';
     if (highestMidi <= lowestMidi) {
       lowestMidi = highestMidi - 1;
       lowestSel.value = lowestMidi;
@@ -265,12 +296,13 @@ export function initWarmup() {
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 export function getWarmupState() {
-  return { lowestMidi, highestMidi, patternKey, bpm, isPlaying, isPaused, keyIndex, phase, patternStep, keySequence: keySequence.slice(), heldNotes: heldNotes.slice() };
+  return { lowestMidi, highestMidi, voicePreset, patternKey, bpm, isPlaying, isPaused, keyIndex, phase, patternStep, keySequence: keySequence.slice(), heldNotes: heldNotes.slice() };
 }
 
 export function setWarmupState(overrides) {
   if (overrides.lowestMidi  !== undefined) lowestMidi  = overrides.lowestMidi;
   if (overrides.highestMidi !== undefined) highestMidi = overrides.highestMidi;
+  if (overrides.voicePreset !== undefined) voicePreset = overrides.voicePreset;
   if (overrides.patternKey  !== undefined) patternKey  = overrides.patternKey;
   if (overrides.bpm         !== undefined) bpm         = overrides.bpm;
   if (overrides.isPlaying   !== undefined) isPlaying   = overrides.isPlaying;
@@ -286,6 +318,7 @@ export function resetWarmup() {
   timerId     = null;
   lowestMidi  = 45;
   highestMidi = 69;
+  voicePreset = 'baritone';
   patternKey  = 'arpeggio';
   bpm         = 120;
   isPlaying   = false;

@@ -5,6 +5,7 @@ import {
   highestRoot,
   midiLabel,
   getPatterns,
+  VOICE_PRESETS,
   getWarmupState,
   setWarmupState,
   resetWarmup,
@@ -24,6 +25,15 @@ import { playNote, stopNote } from './audio.js';
 function buildDOM() {
   document.body.innerHTML = `
     <section id="warmup-section">
+      <select id="warmupVoice">
+        <option value="bass">Bass</option>
+        <option value="baritone">Baritone</option>
+        <option value="tenor">Tenor</option>
+        <option value="alto">Alto</option>
+        <option value="mezzo">Mezzo-soprano</option>
+        <option value="soprano">Soprano</option>
+        <option value="custom">Custom</option>
+      </select>
       <select id="warmupLowest"></select>
       <select id="warmupHighest"></select>
       <select id="warmupPattern">
@@ -154,7 +164,7 @@ describe('Note selectors', () => {
     const sel = document.getElementById('warmupLowest');
     const values = [...sel.options].map(o => +o.value);
     expect(values[0]).toBe(36);   // C2
-    expect(values[values.length - 1]).toBe(72); // C5
+    expect(values[values.length - 1]).toBe(84); // C6
   });
 
   it('defaults to A2 for lowest and A4 for highest', () => {
@@ -196,6 +206,60 @@ describe('Note selectors', () => {
     hSel.value = '50';
     hSel.dispatchEvent(new Event('change'));
     expect(getWarmupState().lowestMidi).toBe(49);
+  });
+});
+
+// ── Voice presets ─────────────────────────────────────────────────────────────
+describe('Voice presets', () => {
+  beforeEach(() => { buildDOM(); resetWarmup(); initWarmup(); });
+  afterEach(() => { resetWarmup(); });
+
+  it('VOICE_PRESETS contains all six voice types', () => {
+    expect(Object.keys(VOICE_PRESETS)).toEqual(['bass','baritone','tenor','alto','mezzo','soprano']);
+  });
+
+  it('defaults to baritone preset (A2–A4)', () => {
+    const s = getWarmupState();
+    expect(s.voicePreset).toBe('baritone');
+    expect(s.lowestMidi).toBe(45);
+    expect(s.highestMidi).toBe(69);
+    expect(document.getElementById('warmupVoice').value).toBe('baritone');
+  });
+
+  it('selecting soprano sets C4–C6', () => {
+    const sel = document.getElementById('warmupVoice');
+    sel.value = 'soprano';
+    sel.dispatchEvent(new Event('change'));
+    const s = getWarmupState();
+    expect(s.lowestMidi).toBe(60);
+    expect(s.highestMidi).toBe(84);
+    expect(+document.getElementById('warmupLowest').value).toBe(60);
+    expect(+document.getElementById('warmupHighest').value).toBe(84);
+  });
+
+  it('selecting tenor sets C3–C5', () => {
+    const sel = document.getElementById('warmupVoice');
+    sel.value = 'tenor';
+    sel.dispatchEvent(new Event('change'));
+    const s = getWarmupState();
+    expect(s.lowestMidi).toBe(48);
+    expect(s.highestMidi).toBe(72);
+  });
+
+  it('manually changing From switches voice to Custom', () => {
+    const lSel = document.getElementById('warmupLowest');
+    lSel.value = '50';
+    lSel.dispatchEvent(new Event('change'));
+    expect(getWarmupState().voicePreset).toBe('custom');
+    expect(document.getElementById('warmupVoice').value).toBe('custom');
+  });
+
+  it('manually changing To switches voice to Custom', () => {
+    const hSel = document.getElementById('warmupHighest');
+    hSel.value = '71';
+    hSel.dispatchEvent(new Event('change'));
+    expect(getWarmupState().voicePreset).toBe('custom');
+    expect(document.getElementById('warmupVoice').value).toBe('custom');
   });
 });
 
