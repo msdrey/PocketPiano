@@ -274,10 +274,10 @@ describe('Sequencer – pause and resume', () => {
     expect(getWarmupState().isPlaying).toBe(true);
   });
 
-  it('play button shows ⏸ while playing and ▶ while paused', () => {
+  it('play button shows SVG pause icon while playing and ▶ while paused', () => {
     const btn = document.getElementById('warmupPlayPause');
     btn.click(); // play
-    expect(btn.textContent).toBe('⏸');
+    expect(btn.querySelector('svg')).not.toBeNull();
     btn.click(); // pause
     expect(btn.textContent).toBe('▶');
   });
