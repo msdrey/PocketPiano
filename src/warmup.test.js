@@ -84,20 +84,20 @@ describe('BPM controls', () => {
   beforeEach(() => { buildDOM(); resetWarmup(); initWarmup(); });
   afterEach(() => { resetWarmup(); });
 
-  it('display initialises to 80 BPM', () => {
-    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('80 BPM');
+  it('display initialises to 120 BPM', () => {
+    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('120 BPM');
   });
 
   it('+ button increments BPM by 4', () => {
     document.getElementById('warmupBpmUp').click();
-    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('84 BPM');
-    expect(getWarmupState().bpm).toBe(84);
+    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('124 BPM');
+    expect(getWarmupState().bpm).toBe(124);
   });
 
   it('− button decrements BPM by 4', () => {
     document.getElementById('warmupBpmDown').click();
-    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('76 BPM');
-    expect(getWarmupState().bpm).toBe(76);
+    expect(document.getElementById('warmupBpmDisplay').textContent).toBe('116 BPM');
+    expect(getWarmupState().bpm).toBe(116);
   });
 
   it('BPM is clamped at maximum (160)', () => {
@@ -184,6 +184,7 @@ describe('Sequencer – chord playback', () => {
 
   it('first tick plays the opening major chord (root, M3, P5)', () => {
     document.getElementById('warmupPlayPause').click();
+    vi.advanceTimersByTime(80); // pre-roll delay before first tick
     // root=60 → notes 60, 64, 67
     expect(playNote).toHaveBeenCalledWith(60);
     expect(playNote).toHaveBeenCalledWith(64);
@@ -195,7 +196,7 @@ describe('Sequencer – chord playback', () => {
     setWarmupState({ patternKey: 'triad' }); // offsets [0,4,7,4,0]
     document.getElementById('warmupPlayPause').click();
     playNote.mockClear();
-    vi.advanceTimersByTime(Math.ceil(60000 / 80 * 2)); // 2 beats
+    vi.advanceTimersByTime(80 + Math.ceil(60000 / 120 * 2)); // pre-roll + 2 beats
     // First pattern note should be root (offset 0)
     expect(playNote).toHaveBeenCalledWith(60);
   });
@@ -267,7 +268,7 @@ describe('Sequencer – restart', () => {
   it('restart while playing resets keyIndex to 0 and keeps playing', () => {
     document.getElementById('warmupPlayPause').click(); // play
     // Advance past the opening chord so keyIndex might have moved
-    vi.advanceTimersByTime(60000 / 80 * 10);
+    vi.advanceTimersByTime(60000 / 120 * 10);
     document.getElementById('warmupRestart').click();
     const s = getWarmupState();
     expect(s.keyIndex).toBe(0);
@@ -331,7 +332,7 @@ describe('Sequencer – key advancement', () => {
     setWarmupState({ lowestMidi: 60, highestMidi: 60 });
     document.getElementById('warmupPlayPause').click(); // play
     // chord1=2, pattern=6×1+last×2=8, chord2=1 → 11 beats total
-    const beatMs = 60000 / 80;
+    const beatMs = 60000 / 120;
     vi.advanceTimersByTime(beatMs * 12);
     expect(getWarmupState().isPlaying).toBe(false);
   });

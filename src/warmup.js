@@ -22,7 +22,7 @@ const BPM_STEP = 4;
 let lowestMidi  = 48; // C3
 let highestMidi = 60; // C4
 let patternKey  = 'arpeggio';
-let bpm         = 80;
+let bpm         = 120;
 
 let isPlaying   = false;
 let isPaused    = false;
@@ -135,7 +135,9 @@ function play() {
   isPlaying   = true;
   isPaused    = false;
   updateTransportUI();
-  tick();
+  // Brief pre-roll so the audio context is fully awake before the first
+  // oscillators fire — prevents the click artifact on initial play.
+  timerId = setTimeout(tick, 80);
 }
 
 function pause() {
@@ -255,7 +257,7 @@ export function resetWarmup() {
   lowestMidi  = 48;
   highestMidi = 60;
   patternKey  = 'arpeggio';
-  bpm         = 80;
+  bpm         = 120;
   isPlaying   = false;
   isPaused    = false;
   keySequence = [];
