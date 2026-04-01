@@ -331,9 +331,10 @@ describe('Sequencer – key advancement', () => {
     // A single-key sequence finishes after one block
     setWarmupState({ lowestMidi: 60, highestMidi: 60 });
     document.getElementById('warmupPlayPause').click(); // play
-    // chord1=2, pattern=6×1+last×2=8, chord2=1 → 11 beats total
+    // chord1=2, pattern=6×1+last×2=8, no final chord → 10 beats total
+    // (plus 80ms pre-roll); 11 beats of headroom is sufficient
     const beatMs = 60000 / 120;
-    vi.advanceTimersByTime(beatMs * 12);
+    vi.advanceTimersByTime(80 + beatMs * 11);
     expect(getWarmupState().isPlaying).toBe(false);
   });
 });

@@ -106,11 +106,12 @@ function tick() {
     timerId = setTimeout(tick, isLastNote ? beatMs * 2 : beatMs);
 
   } else { // chord2 — replay same-key chord for 1 beat before moving on
-    startNotes(CHORD_OFFSETS.map(o => root + o));
     keyIndex++;
     if (keyIndex >= keySequence.length) {
-      timerId = setTimeout(finish, beatMs);
+      // Last key: skip the final chord and end immediately after the last note
+      finish();
     } else {
+      startNotes(CHORD_OFFSETS.map(o => root + o));
       phase = 'chord1';
       patternStep = 0;
       timerId = setTimeout(tick, beatMs);
