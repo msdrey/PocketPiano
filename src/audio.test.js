@@ -87,10 +87,18 @@ describe('primeAudio', () => {
     expect(mockCtx.createBuffer).toHaveBeenCalledOnce();
   });
 
-  it('calls resume() when context is suspended', () => {
+  it('starts resuming the context when suspended', () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     primeAudio();
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+  });
+
+  it('does not call resume() a second time if already resuming', async () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio(); // starts resume
+    primeAudio(); // idempotent — primed flag prevents second call
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
   });
 
@@ -169,15 +177,30 @@ describe('playNote', () => {
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
-  it('resumes a suspended context but does NOT queue the note (prevents burst-on-unlock)', async () => {
+  it('resumes a suspended context and plays the first note once unlocked', async () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     playNote(60);
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
-    // Note must be silently dropped — not queued for later — to prevent the
-    // burst of simultaneous notes that occurs when the context finally unlocks.
-    await suspendedCtx.resume.mock.results[0].value; // flush promise
+    // Oscillators not yet created — context is still resuming
     expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
+    await suspendedCtx.resume.mock.results[0].value; // flush resume promise
+    // First note should play once the context has unlocked
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
+    setContext(mockCtx);
+  });
+
+  it('drops subsequent notes while suspended — only the first is queued', async () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    playNote(60); // first — queued
+    playNote(62); // dropped
+    playNote(64); // dropped
+    // resume() called only once (startResume is idempotent)
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+    await suspendedCtx.resume.mock.results[0].value;
+    // Exactly 8 oscillators (one note, 8 harmonics) — not 24
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
     setContext(mockCtx);
   });
 

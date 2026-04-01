@@ -5,6 +5,12 @@ let contextReady = false; // true after first note is scheduled on this context
 let masterGain = null;    // single GainNode wired to destination; created lazily on first note
 let volume = 1.0;         // desired volume, applied to masterGain when it exists
 
+// When the AudioContext is suspended (strict autoplay policy), resume() is async.
+// We track the ongoing resume promise so we can schedule exactly ONE note to play
+// once the context unlocks — preventing the burst caused by queuing many notes.
+let resumePromise = null;
+let pendingMidi   = null; // first note pressed during the suspension window
+
 export function getVolume() { return volume; }
 
 export function setVolume(v) {
@@ -23,6 +29,20 @@ function getContext() {
   return ctx;
 }
 
+// Start the async resume cycle once; when the context unlocks, play the first
+// note that was pressed during the suspension window (if any).
+function startResume(c) {
+  if (resumePromise) return; // resume already in flight
+  resumePromise = c.resume().then(() => {
+    resumePromise = null;
+    if (pendingMidi !== null) {
+      const midi = pendingMidi;
+      pendingMidi = null;
+      scheduleNote(midi);
+    }
+  });
+}
+
 // Call this at the start of every touch/mouse handler to create the AudioContext
 // and play a silent buffer — this wakes the audio hardware so it is ready by
 // the time the first note is scheduled.
@@ -38,7 +58,7 @@ export function primeAudio() {
   // Proactively resume so the context is running by the time the first note
   // is scheduled.  Without this, the context can stay suspended in environments
   // with strict autoplay policies (iframes, preview panes, etc.).
-  if (c.state === 'suspended') c.resume();
+  if (c.state === 'suspended') startResume(c);
 }
 
 // When the page is restored from BFCache (tab closed/reopened), the module's
@@ -46,7 +66,7 @@ export function primeAudio() {
 // Reset it so the next keypress creates a fresh one.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && ctx) { ctx.close(); ctx = null; masterGain = null; primed = false; contextReady = false; }
+    if (e.persisted && ctx) { ctx.close(); ctx = null; masterGain = null; primed = false; contextReady = false; resumePromise = null; pendingMidi = null; }
   });
 }
 
@@ -61,6 +81,7 @@ export function midiToFreq(m) {
 // setContext resets all per-context state so tests start from a clean slate
 export function setContext(audioCtx) {
   ctx = audioCtx; masterGain = null; primed = false; contextReady = false;
+  resumePromise = null; pendingMidi = null;
   for (const k of Object.keys(activeNodes)) delete activeNodes[k];
   for (const k of Object.keys(fadingNodes)) delete fadingNodes[k];
 }
@@ -145,12 +166,12 @@ export function playNote(midi) {
   const c = getContext();
   if (!c) return;
   if (c.state === 'suspended') {
-    // Context is suspended (strict autoplay policy). Call resume() to wake it
-    // for future presses, but intentionally do NOT queue scheduleNote in the
-    // .then() callback.  Queuing causes all keypresses made while suspended to
-    // fire simultaneously the moment the context unlocks — producing a loud
-    // burst with a click.  A silently missed note is far less jarring.
-    c.resume();
+    // Context is suspended (strict autoplay policy).  Start resuming if we
+    // haven't already, and remember the *first* note pressed so it plays the
+    // moment the context unlocks.  All subsequent presses while still resuming
+    // are dropped — a silently missed note is far less jarring than a burst.
+    startResume(c);
+    if (pendingMidi === null) pendingMidi = midi;
   } else {
     scheduleNote(midi);
   }
