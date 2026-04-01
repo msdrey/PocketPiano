@@ -35,6 +35,10 @@ export function primeAudio() {
   src.buffer = buf;
   src.connect(c.destination);
   src.start(0);
+  // Proactively resume so the context is running by the time the first note
+  // is scheduled.  Without this, the context can stay suspended in environments
+  // with strict autoplay policies (iframes, preview panes, etc.).
+  if (c.state === 'suspended') c.resume();
 }
 
 // When the page is restored from BFCache (tab closed/reopened), the module's
@@ -141,8 +145,12 @@ export function playNote(midi) {
   const c = getContext();
   if (!c) return;
   if (c.state === 'suspended') {
-    // Fallback: context was created outside a user gesture (e.g. tests); resume first
-    c.resume().then(() => scheduleNote(midi));
+    // Context is suspended (strict autoplay policy). Call resume() to wake it
+    // for future presses, but intentionally do NOT queue scheduleNote in the
+    // .then() callback.  Queuing causes all keypresses made while suspended to
+    // fire simultaneously the moment the context unlocks — producing a loud
+    // burst with a click.  A silently missed note is far less jarring.
+    c.resume();
   } else {
     scheduleNote(midi);
   }

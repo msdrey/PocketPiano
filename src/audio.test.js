@@ -87,6 +87,13 @@ describe('primeAudio', () => {
     expect(mockCtx.createBuffer).toHaveBeenCalledOnce();
   });
 
+  it('calls resume() when context is suspended', () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio();
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+  });
+
   it('does nothing when ctx is unavailable', () => {
     setContext(null);
     expect(() => primeAudio()).not.toThrow();
@@ -162,15 +169,15 @@ describe('playNote', () => {
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
-  it('resumes a suspended context and schedules note after resume resolves (mobile unlock)', async () => {
+  it('resumes a suspended context but does NOT queue the note (prevents burst-on-unlock)', async () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     playNote(60);
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
-    // Oscillators not yet created — scheduling happens after resume() resolves
-    expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
+    // Note must be silently dropped — not queued for later — to prevent the
+    // burst of simultaneous notes that occurs when the context finally unlocks.
     await suspendedCtx.resume.mock.results[0].value; // flush promise
-    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
+    expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
     setContext(mockCtx);
   });
 
