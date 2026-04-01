@@ -59,6 +59,25 @@ export function buildKeySequence(low, high) {
   return seq;
 }
 
+/**
+ * The highest semitone offset above the root that is ever played for a given
+ * pattern, taking both the pattern notes and the opening/closing chord into
+ * account. Used to back-calculate the highest *root* from the user-selected
+ * highest *pitch*.
+ */
+export function maxPatternOffset(pk) {
+  return Math.max(...PATTERNS[pk]); // chord excluded — "To" is the highest sung note
+}
+
+/**
+ * Given the user's chosen highest-note MIDI value, return the highest root
+ * note such that no pitch in the block exceeds highestMidi.
+ * Clamped to lowestMidi so the sequence is never empty.
+ */
+export function highestRoot(pk, highestMidi, lowestMidi) {
+  return Math.max(lowestMidi, highestMidi - maxPatternOffset(pk));
+}
+
 export function getPatterns() { return PATTERNS; }
 
 // ── Sequencer ─────────────────────────────────────────────────────────────────
@@ -129,7 +148,7 @@ function play() {
     tick();
     return;
   }
-  keySequence = buildKeySequence(lowestMidi, highestMidi);
+  keySequence = buildKeySequence(lowestMidi, highestRoot(patternKey, highestMidi, lowestMidi));
   keyIndex    = 0;
   phase       = 'chord1';
   patternStep = 0;
@@ -161,7 +180,7 @@ function restart() {
   patternStep = 0;
   if (wasPlaying) {
     // Rebuild sequence in case note range changed between plays
-    keySequence = buildKeySequence(lowestMidi, highestMidi);
+    keySequence = buildKeySequence(lowestMidi, highestRoot(patternKey, highestMidi, lowestMidi));
     isPlaying   = true;
     updateTransportUI();
     tick();

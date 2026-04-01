@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   buildKeySequence,
+  maxPatternOffset,
+  highestRoot,
   midiLabel,
   getPatterns,
   getWarmupState,
@@ -51,6 +53,38 @@ describe('buildKeySequence', () => {
 
   it('two-note range', () => {
     expect(buildKeySequence(48, 49)).toEqual([48, 49, 48]);
+  });
+});
+
+// ── maxPatternOffset / highestRoot ───────────────────────────────────────────
+describe('maxPatternOffset', () => {
+  it('arpeggio reaches octave above root (12 semitones)', () => {
+    expect(maxPatternOffset('arpeggio')).toBe(12);
+  });
+
+  it('scale reaches a fifth above root (7 semitones)', () => {
+    expect(maxPatternOffset('scale')).toBe(7);
+  });
+
+  it('triad reaches a fifth above root (7 semitones)', () => {
+    expect(maxPatternOffset('triad')).toBe(7);
+  });
+});
+
+describe('highestRoot', () => {
+  it('subtracts maxOffset from highestMidi for arpeggio', () => {
+    // arpeggio offset=12; highest note=C4(60) → highest root=C3(48)
+    expect(highestRoot('arpeggio', 60, 36)).toBe(48);
+  });
+
+  it('subtracts maxOffset from highestMidi for scale/triad', () => {
+    // scale offset=7; highest note=G4(67) → highest root=C4(60)
+    expect(highestRoot('scale', 67, 36)).toBe(60);
+  });
+
+  it('clamps to lowestMidi when highestMidi is too low for the pattern', () => {
+    // arpeggio offset=12; highestMidi=40; lowestMidi=36 → 40-12=28 < 36 → 36
+    expect(highestRoot('arpeggio', 40, 36)).toBe(36);
   });
 });
 
@@ -308,22 +342,9 @@ describe('Sequencer – key advancement', () => {
   });
 
   it('advances to next key after chord2 phase', () => {
-    setWarmupState({
-      lowestMidi: 60, highestMidi: 61,
-      keySequence: buildKeySequence(60, 61),
-      isPlaying: true,
-      keyIndex: 0,
-      phase: 'chord2',
-      patternStep: 0,
-    });
-    // Manually trigger the chord2 path: set isPlaying and call tick via a play click
-    // Instead directly test via state injection and timer advancement
-    document.getElementById('warmupPlayPause').click(); // play (starts new sequence)
-    // Override to chord2 phase at key 0
-    setWarmupState({ keyIndex: 0, phase: 'chord2' });
-    // The next timer fire will handle chord2
-    // Re-invoke by advancing timer; but since we have playPause already running
-    // We need to look at this differently — just check the logic via direct state
+    // arpeggio offset=12; highestMidi=73 → highestRoot=61 → arc=[60,61,60]
+    setWarmupState({ lowestMidi: 60, highestMidi: 73 });
+    document.getElementById('warmupPlayPause').click();
     expect(getWarmupState().keySequence).toEqual([60, 61, 60]);
   });
 
