@@ -100,19 +100,20 @@ function tick() {
     const offsets = PATTERNS[patternKey];
     startNotes([root + offsets[patternStep]]);
     patternStep++;
-    if (patternStep >= offsets.length) phase = 'chord2';
-    timerId = setTimeout(tick, beatMs);
+    const isLastNote = patternStep >= offsets.length;
+    if (isLastNote) phase = 'chord2';
+    // Last pattern note holds for 2 beats; all others 1 beat
+    timerId = setTimeout(tick, isLastNote ? beatMs * 2 : beatMs);
 
-  } else { // chord2
+  } else { // chord2 — replay same-key chord for 1 beat before moving on
     startNotes(CHORD_OFFSETS.map(o => root + o));
     keyIndex++;
     if (keyIndex >= keySequence.length) {
-      // Schedule the stop after the final chord's 2-beat duration
-      timerId = setTimeout(finish, beatMs * 2);
+      timerId = setTimeout(finish, beatMs);
     } else {
       phase = 'chord1';
       patternStep = 0;
-      timerId = setTimeout(tick, beatMs * 2);
+      timerId = setTimeout(tick, beatMs);
     }
   }
 }

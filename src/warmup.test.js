@@ -330,9 +330,8 @@ describe('Sequencer – key advancement', () => {
     // A single-key sequence finishes after one block
     setWarmupState({ lowestMidi: 60, highestMidi: 60 });
     document.getElementById('warmupPlayPause').click(); // play
-    // chord1 = 2 beats, then pattern (triad = default arpeggio = 7 notes), then chord2 = 2 beats
+    // chord1=2, pattern=6×1+last×2=8, chord2=1 → 11 beats total
     const beatMs = 60000 / 80;
-    // 2 (chord1) + 7 (arpeggio pattern) + 2 (chord2) = 11 beats
     vi.advanceTimersByTime(beatMs * 12);
     expect(getWarmupState().isPlaying).toBe(false);
   });
