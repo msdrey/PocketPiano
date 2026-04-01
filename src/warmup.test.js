@@ -157,9 +157,9 @@ describe('Note selectors', () => {
     expect(values[values.length - 1]).toBe(72); // C5
   });
 
-  it('defaults to C3 for lowest and C4 for highest', () => {
+  it('defaults to C3 for lowest and C5 for highest', () => {
     expect(+document.getElementById('warmupLowest').value).toBe(48);
-    expect(+document.getElementById('warmupHighest').value).toBe(60);
+    expect(+document.getElementById('warmupHighest').value).toBe(72);
   });
 
   it('changing lowest updates state', () => {
