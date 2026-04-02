@@ -29,36 +29,35 @@ function getContext() {
   return ctx;
 }
 
-// Start the async resume cycle once; when the context unlocks, play the first
-// note that was pressed during the suspension window (if any).
-function startResume(c) {
-  if (resumePromise) return; // resume already in flight
-  resumePromise = c.resume().then(() => {
-    resumePromise = null;
-    if (pendingMidi !== null) {
-      const midi = pendingMidi;
-      pendingMidi = null;
-      scheduleNote(midi);
-    }
-  });
-}
-
 // Call this at the start of every touch/mouse handler to create the AudioContext
 // and play a silent buffer — this wakes the audio hardware so it is ready by
 // the time the first note is scheduled.
+//
+// Always called from a direct user-gesture handler, so c.resume() is reliable
+// here.  playNote() does NOT call resume() — it only parks pendingMidi — because
+// setTimeout callbacks are not user gestures and resume() is unreliable there.
 export function primeAudio() {
   const c = getContext();
-  if (!c || primed) return;
+  if (!c) return;
+  // Always try to resume from this user-gesture context, even if already primed.
+  // A resumePromise guard prevents flooding when a resume is already in flight.
+  if (c.state === 'suspended' && !resumePromise) {
+    resumePromise = c.resume().then(() => {
+      resumePromise = null;
+      if (pendingMidi !== null) {
+        const midi = pendingMidi;
+        pendingMidi = null;
+        scheduleNote(midi);
+      }
+    });
+  }
+  if (primed) return;
   primed = true;
   const buf = c.createBuffer(1, 1, c.sampleRate);
   const src = c.createBufferSource();
   src.buffer = buf;
   src.connect(c.destination);
   src.start(0);
-  // Proactively resume so the context is running by the time the first note
-  // is scheduled.  Without this, the context can stay suspended in environments
-  // with strict autoplay policies (iframes, preview panes, etc.).
-  if (c.state === 'suspended') startResume(c);
 }
 
 // When the page is restored from BFCache (tab closed/reopened), the module's
@@ -166,11 +165,9 @@ export function playNote(midi) {
   const c = getContext();
   if (!c) return;
   if (c.state === 'suspended') {
-    // Context is suspended (strict autoplay policy).  Start resuming if we
-    // haven't already, and remember the *first* note pressed so it plays the
-    // moment the context unlocks.  All subsequent presses while still resuming
-    // are dropped — a silently missed note is far less jarring than a burst.
-    startResume(c);
+    // Context is suspended.  primeAudio() (called from the user-gesture handler)
+    // is responsible for calling c.resume().  Here we just park the first note
+    // so it plays the moment the context unlocks; subsequent notes are dropped.
     if (pendingMidi === null) pendingMidi = midi;
   } else {
     scheduleNote(midi);
@@ -178,6 +175,7 @@ export function playNote(midi) {
 }
 
 export function stopNote(midi) {
+  if (midi === pendingMidi) { pendingMidi = null; } // cancel queued note on release
   if (!activeNodes[midi]) return;
   const { oscs, master } = activeNodes[midi];
   // Check before deleting: if 4 or more notes are currently sounding (active or

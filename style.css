@@ -303,6 +303,16 @@ body { display: flex; flex-direction: column; }
   border-color: rgba(200,169,110,0.5);
 }
 
+/* ── Pull-to-refresh (browser only, not PWA) ── */
+/* The global * rule sets touch-action:none which blocks pull-to-refresh.
+   In standalone (PWA) mode we keep that blocked intentionally.
+   In browser mode, re-enable vertical panning on the outermost elements so the
+   native pull-to-refresh gesture still works from the top of the page. */
+@media not all and (display-mode: standalone) {
+  html, body { touch-action: pan-y; }
+  .header    { touch-action: pan-y; }
+}
+
 /* ── Desktop enhancements ── */
 @media (min-width: 900px) {
   .logo { font-size: 30px; }
