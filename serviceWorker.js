@@ -6,6 +6,7 @@ export const ASSETS = [
   '/style.css',
   '/src/audio.js',
   '/src/keyboard.js',
+  '/src/warmup.js',
   '/manifest.json',
   '/icon.png',
   '/icon.svg',

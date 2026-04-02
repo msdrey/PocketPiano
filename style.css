@@ -201,6 +201,118 @@ body { display: flex; flex-direction: column; }
   box-shadow: 0 0 8px rgba(200,169,110,0.5);
 }
 
+/* ── Vocal Warm-Up section (portrait only) ── */
+#warmup-section {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  /* Give piano-wrapper an explicit height so keyboard-scroll (flex:1 inside)
+     has a parent height to expand into. Shorter than landscape to leave room
+     for the warm-up section below.
+     lid=18px + keyboard 200px + rail=60px → 278px max */
+  .piano-wrapper { flex: 0 0 min(278px, 38vh); }
+  .keyboard-scroll { max-height: 200px; }
+
+  #warmup-section {
+    display: flex; flex-direction: column;
+    flex: 1; overflow-y: auto;
+    padding: 14px 20px env(safe-area-inset-bottom, 0px);
+    background: linear-gradient(180deg, #100e0b 0%, #0a0806 100%);
+    gap: 10px;
+    touch-action: auto;
+    border-top: 1px solid rgba(200,169,110,0.15);
+  }
+}
+
+.warmup-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--gold); text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.warmup-row {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.warmup-label {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px; color: var(--gold); opacity: 0.6;
+  letter-spacing: 0.08em;
+}
+
+.warmup-select {
+  -webkit-appearance: none; appearance: none;
+  background: rgba(200,169,110,0.08);
+  border: 1px solid rgba(200,169,110,0.25);
+  border-radius: 4px;
+  color: var(--cream);
+  font-family: 'Courier Prime', monospace; font-size: 12px;
+  padding: 5px 8px;
+  cursor: pointer; touch-action: auto;
+}
+
+.warmup-pattern-select,
+.warmup-voice-select { width: 100%; }
+
+.warmup-tempo-row { justify-content: center; gap: 14px; }
+
+.warmup-ctrl-btn {
+  background: none;
+  border: 1px solid rgba(200,169,110,0.3);
+  border-radius: 4px;
+  color: var(--gold); font-size: 16px;
+  width: 32px; height: 32px;
+  cursor: pointer; touch-action: auto;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.warmup-bpm-display {
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px; color: var(--gold);
+  min-width: 72px; text-align: center;
+  letter-spacing: 0.08em;
+}
+
+.warmup-transport {
+  justify-content: center; gap: 16px;
+  padding-top: 2px;
+}
+
+.warmup-transport-btn {
+  background: rgba(200,169,110,0.08);
+  border: 1px solid rgba(200,169,110,0.3);
+  border-radius: 50%;
+  color: var(--gold); font-size: 18px;
+  width: 48px; height: 48px;
+  cursor: pointer; touch-action: auto;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+}
+
+.warmup-transport-btn:active,
+.warmup-transport-btn:focus {
+  background: rgba(200,169,110,0.2);
+  outline: none;
+}
+
+.warmup-play-btn {
+  width: 56px; height: 56px; font-size: 20px;
+  background: rgba(200,169,110,0.14);
+  border-color: rgba(200,169,110,0.5);
+}
+
+/* ── Pull-to-refresh (browser only, not PWA) ── */
+/* The global * rule sets touch-action:none which blocks pull-to-refresh.
+   In standalone (PWA) mode we keep that blocked intentionally.
+   In browser mode, re-enable vertical panning on the outermost elements so the
+   native pull-to-refresh gesture still works from the top of the page. */
+@media not all and (display-mode: standalone) {
+  html, body { touch-action: pan-y; }
+  .header    { touch-action: pan-y; }
+}
+
 /* ── Desktop enhancements ── */
 @media (min-width: 900px) {
   .logo { font-size: 30px; }

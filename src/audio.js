@@ -5,6 +5,12 @@ let contextReady = false; // true after first note is scheduled on this context
 let masterGain = null;    // single GainNode wired to destination; created lazily on first note
 let volume = 1.0;         // desired volume, applied to masterGain when it exists
 
+// When the AudioContext is suspended (strict autoplay policy), resume() is async.
+// We track the ongoing resume promise so we can schedule exactly ONE note to play
+// once the context unlocks — preventing the burst caused by queuing many notes.
+let resumePromise = null;
+let pendingMidi   = null; // first note pressed during the suspension window
+
 export function getVolume() { return volume; }
 
 export function setVolume(v) {
@@ -26,9 +32,26 @@ function getContext() {
 // Call this at the start of every touch/mouse handler to create the AudioContext
 // and play a silent buffer — this wakes the audio hardware so it is ready by
 // the time the first note is scheduled.
+//
+// Always called from a direct user-gesture handler, so c.resume() is reliable
+// here.  playNote() does NOT call resume() — it only parks pendingMidi — because
+// setTimeout callbacks are not user gestures and resume() is unreliable there.
 export function primeAudio() {
   const c = getContext();
-  if (!c || primed) return;
+  if (!c) return;
+  // Always try to resume from this user-gesture context, even if already primed.
+  // A resumePromise guard prevents flooding when a resume is already in flight.
+  if (c.state === 'suspended' && !resumePromise) {
+    resumePromise = c.resume().then(() => {
+      resumePromise = null;
+      if (pendingMidi !== null) {
+        const midi = pendingMidi;
+        pendingMidi = null;
+        scheduleNote(midi);
+      }
+    });
+  }
+  if (primed) return;
   primed = true;
   const buf = c.createBuffer(1, 1, c.sampleRate);
   const src = c.createBufferSource();
@@ -42,7 +65,7 @@ export function primeAudio() {
 // Reset it so the next keypress creates a fresh one.
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', (e) => {
-    if (e.persisted && ctx) { ctx.close(); ctx = null; masterGain = null; primed = false; contextReady = false; }
+    if (e.persisted && ctx) { ctx.close(); ctx = null; masterGain = null; primed = false; contextReady = false; resumePromise = null; pendingMidi = null; }
   });
 }
 
@@ -57,6 +80,7 @@ export function midiToFreq(m) {
 // setContext resets all per-context state so tests start from a clean slate
 export function setContext(audioCtx) {
   ctx = audioCtx; masterGain = null; primed = false; contextReady = false;
+  resumePromise = null; pendingMidi = null;
   for (const k of Object.keys(activeNodes)) delete activeNodes[k];
   for (const k of Object.keys(fadingNodes)) delete fadingNodes[k];
 }
@@ -141,14 +165,17 @@ export function playNote(midi) {
   const c = getContext();
   if (!c) return;
   if (c.state === 'suspended') {
-    // Fallback: context was created outside a user gesture (e.g. tests); resume first
-    c.resume().then(() => scheduleNote(midi));
+    // Context is suspended.  primeAudio() (called from the user-gesture handler)
+    // is responsible for calling c.resume().  Here we just park the first note
+    // so it plays the moment the context unlocks; subsequent notes are dropped.
+    if (pendingMidi === null) pendingMidi = midi;
   } else {
     scheduleNote(midi);
   }
 }
 
 export function stopNote(midi) {
+  if (midi === pendingMidi) { pendingMidi = null; } // cancel queued note on release
   if (!activeNodes[midi]) return;
   const { oscs, master } = activeNodes[midi];
   // Check before deleting: if 4 or more notes are currently sounding (active or
