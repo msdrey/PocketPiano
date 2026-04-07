@@ -217,7 +217,8 @@ body { display: flex; flex-direction: column; }
   #warmup-section {
     display: flex; flex-direction: column;
     flex: 1; overflow-y: auto;
-    padding: 14px 20px env(safe-area-inset-bottom, 0px);
+    justify-content: space-between;
+    padding: 14px 20px env(safe-area-inset-bottom, 14px);
     background: linear-gradient(180deg, #100e0b 0%, #0a0806 100%);
     gap: 10px;
     touch-action: auto;
@@ -310,9 +311,14 @@ body { display: flex; flex-direction: column; }
    native pull-to-refresh gesture still works from the top of the page. */
 @media not all and (display-mode: standalone) {
   /* Re-enable pull-to-refresh in browser mode.
-     The global * rule sets touch-action:none everywhere, which blocks it.
-     We override the header element AND all its descendants so the gesture
-     works regardless of which child element the user's finger touches. */
+     Two things block it:
+     1. touch-action:none on * — overridden below for the header area.
+     2. overflow:hidden on html/body — overridden to auto so the browser
+        can detect the overscroll gesture that triggers pull-to-refresh.
+        Content still fills the screen exactly (flex layout), so no actual
+        scrolling occurs; only the overscroll gesture is unlocked. */
+  html { overflow-y: auto; }
+  body { overflow-y: auto; }
   html, body, .header, .header * { touch-action: pan-y; }
 }
 
