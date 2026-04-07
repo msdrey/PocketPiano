@@ -29,6 +29,7 @@
       <span id="transposeValue" class="transpose-value">0</span>
       <button id="transposeUp" class="transpose-btn">+</button>
     </div>
+    <button id="qtToggle" class="qt-toggle-btn" aria-label="Toggle quarter tones">¼</button>
     <div class="pr-badge" id="prBadge"></div>
   </div>
 </div>
@@ -37,6 +38,7 @@
   <div class="lid"></div>
   <div class="keyboard-scroll" id="keyboardScroll">
     <div class="keyboard" id="keyboard">
+      <div class="quarter-tone-layer" id="quarterToneLayer" style="display:none"></div>
       <div class="black-keys-layer" id="blackKeysLayer"></div>
     </div>
   </div>
@@ -87,11 +89,13 @@
   import { initTransposeControls } from './src/transpose.js';
   import { initVolumeControl } from './src/volume.js';
   import { initWarmup } from './src/warmup.js';
+  import { initQuarterTone } from './src/quartertone.js';
 
   buildKeyboard();
   initTransposeControls();
   initVolumeControl();
   initWarmup();
+  initQuarterTone();
 
   fetch('/pr.json')
     .then(r => r.json())

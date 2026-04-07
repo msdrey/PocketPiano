@@ -97,6 +97,70 @@ body { display: flex; flex-direction: column; }
   opacity: 0.4; letter-spacing: 0.1em;
 }
 
+/* ── Quarter-tone toggle (landscape-only) ── */
+.qt-toggle-btn {
+  display: none; /* hidden in portrait */
+  align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid rgba(200,169,110,0.35);
+  border-radius: 4px;
+  color: var(--gold);
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  padding: 2px 7px;
+  cursor: pointer;
+  touch-action: auto;
+  letter-spacing: 0.05em;
+  transition: background 0.12s, border-color 0.12s;
+}
+.qt-toggle-btn.active {
+  background: rgba(200,169,110,0.18);
+  border-color: var(--gold);
+}
+
+@media (orientation: landscape) {
+  .qt-toggle-btn { display: flex; }
+}
+
+/* ── Quarter-tone key layer ── */
+.quarter-tone-layer {
+  position: absolute;
+  top: 0; left: 0;
+  height: 30px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.key-qt {
+  position: absolute;
+  width: 13px; height: 30px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #4a3c28 0%, #2e2418 60%, #1e1a10 100%);
+  border-radius: 0 0 4px 4px;
+  border-left: 1px solid rgba(200,169,110,0.2);
+  border-right: 1px solid rgba(200,169,110,0.2);
+  border-bottom: 2px solid rgba(200,169,110,0.4);
+  cursor: pointer;
+  pointer-events: all;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 3px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,169,110,0.15);
+  transition: background 0.04s, transform 0.04s;
+}
+.key-qt.pressed {
+  background: linear-gradient(180deg, #6a5c3a 0%, #4e3e28 60%, #3a3020 100%);
+  transform: translateX(-50%) translateY(2px);
+}
+
+.key-qt-label {
+  font-family: 'Courier Prime', monospace;
+  font-size: 6px;
+  color: var(--gold);
+  opacity: 0.75;
+  pointer-events: none;
+  line-height: 1;
+}
+
 /* ── Piano wrapper ── */
 .piano-wrapper {
   flex: 1; overflow: hidden;

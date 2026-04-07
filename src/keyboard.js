@@ -1,5 +1,6 @@
 import { playNote, stopNote, primeAudio } from './audio.js';
 import { getTranspose } from './transpose.js';
+import { pressQt, releaseQt } from './quartertone.js';
 
 // ── Keyboard layout ────────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -7,6 +8,9 @@ const START = 36, END = 84, WHITE_W = 47;
 
 export function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
 export function isBlack(m)  { return [1, 3, 6, 8, 10].includes(m % 12); }
+
+// Returns true if the MIDI value belongs to a quarter-tone key (fractional)
+function isQuarterTone(midi) { return midi % 1 !== 0; }
 
 export function buildKeyboard() {
   const keyboard  = document.getElementById('keyboard');
@@ -70,6 +74,7 @@ export function buildKeyboard() {
 const pressed = new Map();
 
 function press(midi) {
+  if (isQuarterTone(midi)) { pressQt(midi); return; }
   if (pressed.has(midi)) return;
   const playedMidi = midi + getTranspose();
   pressed.set(midi, playedMidi);
@@ -78,6 +83,7 @@ function press(midi) {
 }
 
 function release(midi) {
+  if (isQuarterTone(midi)) { releaseQt(midi); return; }
   if (!pressed.has(midi)) return;
   const playedMidi = pressed.get(midi);
   pressed.delete(midi);
@@ -86,6 +92,10 @@ function release(midi) {
 }
 
 function keyAt(x, y) {
+  for (const el of document.querySelectorAll('.key-qt')) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
+  }
   for (const el of document.querySelectorAll('.key-black')) {
     const r = el.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
