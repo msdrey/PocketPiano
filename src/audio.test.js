@@ -94,12 +94,14 @@ describe('primeAudio', () => {
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
   });
 
-  it('does not call resume() a second time if already resuming', async () => {
+  it('calls resume() each time primeAudio is invoked while suspended', async () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
-    primeAudio(); // starts resume
-    primeAudio(); // idempotent — primed flag prevents second call
-    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+    primeAudio(); // starts resume; also creates silent buffer (primed=false→true)
+    primeAudio(); // primed flag skips buffer creation, but still calls resume
+    expect(suspendedCtx.resume).toHaveBeenCalledTimes(2);
+    // Silent buffer created only once
+    expect(suspendedCtx.createBuffer).toHaveBeenCalledOnce();
   });
 
   it('does nothing when ctx is unavailable', () => {
@@ -195,11 +197,9 @@ describe('playNote', () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     primeAudio(); // user gesture → starts resume
-    playNote(60); // first — queued
-    playNote(62); // dropped
+    playNote(60); // first — queued as pendingMidi
+    playNote(62); // dropped (pendingMidi already set)
     playNote(64); // dropped
-    // resume() called only once (primeAudio guard prevents re-entry)
-    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
     await suspendedCtx.resume.mock.results[0].value;
     // Exactly 8 oscillators (one note, 8 harmonics) — not 24
     expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
@@ -278,15 +278,17 @@ describe('stopNote', () => {
     expect(() => stopNote(60)).not.toThrow();
   });
 
-  it('cancels a queued (pending) note when stopNote is called before unlock', async () => {
+  it('still plays a queued note even if stopNote is called before unlock', async () => {
+    // Piano notes decay via ADSR so playing after release is natural behaviour.
+    // Cancelling the note would cause silence on quick taps.
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
     primeAudio();        // starts resume
     playNote(60);        // parks as pendingMidi
-    stopNote(60);        // should clear pendingMidi
+    stopNote(60);        // stopNote does NOT clear pendingMidi
     await suspendedCtx.resume.mock.results[0].value;
-    // note was cancelled — no oscillators created
-    expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
+    // note still plays — 8 oscillators created
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
     setContext(mockCtx);
   });
 

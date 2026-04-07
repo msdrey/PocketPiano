@@ -309,8 +309,11 @@ body { display: flex; flex-direction: column; }
    In browser mode, re-enable vertical panning on the outermost elements so the
    native pull-to-refresh gesture still works from the top of the page. */
 @media not all and (display-mode: standalone) {
-  html, body { touch-action: pan-y; }
-  .header    { touch-action: pan-y; }
+  /* Re-enable pull-to-refresh in browser mode.
+     The global * rule sets touch-action:none everywhere, which blocks it.
+     We override the header element AND all its descendants so the gesture
+     works regardless of which child element the user's finger touches. */
+  html, body, .header, .header * { touch-action: pan-y; }
 }
 
 /* ── Desktop enhancements ── */
