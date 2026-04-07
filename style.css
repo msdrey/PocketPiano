@@ -126,14 +126,14 @@ body { display: flex; flex-direction: column; }
 .quarter-tone-layer {
   position: absolute;
   top: 0; left: 0;
-  height: 30px;
+  height: 60px;
   pointer-events: none;
   z-index: 3;
 }
 
 .key-qt {
   position: absolute;
-  width: 13px; height: 30px;
+  width: 13px; height: 60px;
   transform: translateX(-50%);
   background: linear-gradient(180deg, #4a3c28 0%, #2e2418 60%, #1e1a10 100%);
   border-radius: 0 0 4px 4px;
