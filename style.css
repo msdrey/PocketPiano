@@ -153,14 +153,14 @@ body { display: flex; flex-direction: column; }
 .quarter-tone-layer {
   position: absolute;
   top: 0; left: 0;
-  height: 100px;
+  height: 46.5%; /* 75% of black key height (62% × 75%) */
   pointer-events: none;
   z-index: 3;
 }
 
 .key-qt {
   position: absolute;
-  width: 16px; height: 100px;
+  width: 16px; height: 100%;
   transform: translateX(-50%);
   background: linear-gradient(180deg, #4a3c28 0%, #2e2418 60%, #1e1a10 100%);
   border-radius: 0 0 4px 4px;

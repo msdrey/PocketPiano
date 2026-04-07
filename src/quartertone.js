@@ -60,12 +60,6 @@ export function buildQuarterToneLayer() {
     el.dataset.midi = qtMidi;
     el.style.left = centerX + 'px';
 
-    // ‡ = quarter-sharp of a natural note; ♯ = quarter-sharp of a sharp note
-    const lbl = document.createElement('span');
-    lbl.className = 'key-qt-label';
-    lbl.textContent = BLACK_MODS.has(m % 12) ? '♯' : '‡';
-    el.appendChild(lbl);
-
     layer.appendChild(el);
   }
 }

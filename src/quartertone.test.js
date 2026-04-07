@@ -93,18 +93,11 @@ describe('buildQuarterToneLayer', () => {
     }
   });
 
-  it('keys between two naturals get ‡ label (e.g. C4–C#4 → ‡)', () => {
-    // MIDI 60 (C4) is natural → its quarter-tone key (60.5) should be ‡
-    const key = document.querySelector('[data-midi="60.5"]');
-    expect(key).not.toBeNull();
-    expect(key.querySelector('.key-qt-label').textContent).toBe('‡');
-  });
-
-  it('keys between two sharps/naturals get ♯ label (e.g. C#4–D4 → ♯)', () => {
-    // MIDI 61 (C#4) is black → its quarter-tone key (61.5) should be ♯
-    const key = document.querySelector('[data-midi="61.5"]');
-    expect(key).not.toBeNull();
-    expect(key.querySelector('.key-qt-label').textContent).toBe('♯');
+  it('quarter-tone keys have no label element', () => {
+    const keys = document.querySelectorAll('.key-qt');
+    for (const k of keys) {
+      expect(k.querySelector('.key-qt-label')).toBeNull();
+    }
   });
 
   it('each key has a left style set (positioned)', () => {
@@ -284,6 +277,14 @@ describe('CSS: quarter-tone toggle visibility', () => {
   let css;
   beforeEach(() => {
     css = readFileSync(resolve(__dirname, '../style.css'), 'utf8');
+  });
+
+  it('.quarter-tone-layer height is 46.5% (75% of the 62% black key height)', () => {
+    expect(css).toMatch(/\.quarter-tone-layer\s*\{[^}]*height:\s*46\.5%/);
+  });
+
+  it('.key-qt height is 100% (fills the quarter-tone layer)', () => {
+    expect(css).toMatch(/\.key-qt\s*\{[^}]*height:\s*100%/);
   });
 
   it('.qt-toggle-wrapper is display:none by default (hidden in portrait)', () => {
