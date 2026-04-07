@@ -87,6 +87,23 @@ describe('primeAudio', () => {
     expect(mockCtx.createBuffer).toHaveBeenCalledOnce();
   });
 
+  it('starts resuming the context when suspended', () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio();
+    expect(suspendedCtx.resume).toHaveBeenCalledOnce();
+  });
+
+  it('calls resume() each time primeAudio is invoked while suspended', async () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio(); // starts resume; also creates silent buffer (primed=false→true)
+    primeAudio(); // primed flag skips buffer creation, but still calls resume
+    expect(suspendedCtx.resume).toHaveBeenCalledTimes(2);
+    // Silent buffer created only once
+    expect(suspendedCtx.createBuffer).toHaveBeenCalledOnce();
+  });
+
   it('does nothing when ctx is unavailable', () => {
     setContext(null);
     expect(() => primeAudio()).not.toThrow();
@@ -162,14 +179,29 @@ describe('playNote', () => {
     expect(secondMaster.gain.setValueAtTime).toHaveBeenCalledWith(0, 1);
   });
 
-  it('resumes a suspended context and schedules note after resume resolves (mobile unlock)', async () => {
+  it('plays the queued note once unlocked via primeAudio', async () => {
     const suspendedCtx = makeMockCtx({ state: 'suspended' });
     setContext(suspendedCtx);
-    playNote(60);
+    primeAudio(); // user gesture → starts resume
+    playNote(60); // parks pendingMidi
     expect(suspendedCtx.resume).toHaveBeenCalledOnce();
-    // Oscillators not yet created — scheduling happens after resume() resolves
+    // Oscillators not yet created — context is still resuming
     expect(suspendedCtx.createOscillator).not.toHaveBeenCalled();
-    await suspendedCtx.resume.mock.results[0].value; // flush promise
+    await suspendedCtx.resume.mock.results[0].value; // flush resume promise
+    // First note should play once the context has unlocked
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
+    setContext(mockCtx);
+  });
+
+  it('drops subsequent notes while suspended — only the first is queued', async () => {
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio(); // user gesture → starts resume
+    playNote(60); // first — queued as pendingMidi
+    playNote(62); // dropped (pendingMidi already set)
+    playNote(64); // dropped
+    await suspendedCtx.resume.mock.results[0].value;
+    // Exactly 8 oscillators (one note, 8 harmonics) — not 24
     expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
     setContext(mockCtx);
   });
@@ -244,6 +276,20 @@ describe('stopNote', () => {
     playNote(60);
     stopNote(60);
     expect(() => stopNote(60)).not.toThrow();
+  });
+
+  it('still plays a queued note even if stopNote is called before unlock', async () => {
+    // Piano notes decay via ADSR so playing after release is natural behaviour.
+    // Cancelling the note would cause silence on quick taps.
+    const suspendedCtx = makeMockCtx({ state: 'suspended' });
+    setContext(suspendedCtx);
+    primeAudio();        // starts resume
+    playNote(60);        // parks as pendingMidi
+    stopNote(60);        // stopNote does NOT clear pendingMidi
+    await suspendedCtx.resume.mock.results[0].value;
+    // note still plays — 8 oscillators created
+    expect(suspendedCtx.createOscillator).toHaveBeenCalledTimes(8);
+    setContext(mockCtx);
   });
 
   it('uses full 300ms release for an isolated note with no other notes playing', () => {

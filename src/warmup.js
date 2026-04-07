@@ -1,0 +1,331 @@
+import { playNote, stopNote, primeAudio } from './audio.js';
+
+// ── Patterns ──────────────────────────────────────────────────────────────────
+// Each array is semitone offsets from the root note (one note per beat)
+const PATTERNS = {
+  arpeggio: [0, 4, 7, 12, 7, 4, 0],        // 1–3–5–8–5–3–1
+  scale:    [0, 2, 4, 5, 7, 5, 4, 2, 0],   // Do Re Mi Fa Sol Fa Mi Re Do
+  triad:    [0, 4, 7, 4, 0],               // 1–3–5–3–1
+};
+
+const CHORD_OFFSETS = [0, 4, 7]; // major triad: root, M3, P5
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const WARMUP_LOW  = 36; // C2 – lowest selectable note
+const WARMUP_HIGH = 84; // C6 – highest selectable note (covers soprano)
+
+const BPM_MIN = 40;
+const BPM_MAX = 160;
+const BPM_STEP = 4;
+
+// ── Voice presets ─────────────────────────────────────────────────────────────
+// lowest = lowest root note (From); highest = highest *sung* note (To)
+export const VOICE_PRESETS = {
+  bass:     { lowest: 40, highest: 64 }, // E2 – E4
+  baritone: { lowest: 45, highest: 69 }, // A2 – A4
+  tenor:    { lowest: 48, highest: 72 }, // C3 – C5
+  alto:     { lowest: 53, highest: 77 }, // F3 – F5
+  mezzo:    { lowest: 57, highest: 81 }, // A3 – A5
+  soprano:  { lowest: 60, highest: 84 }, // C4 – C6
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let lowestMidi  = 45; // A2
+let highestMidi = 69; // A4
+let voicePreset = 'baritone';
+let patternKey  = 'arpeggio';
+let bpm         = 120;
+
+let isPlaying   = false;
+let isPaused    = false;
+
+// Sequence of MIDI root notes: ascending then descending arc
+let keySequence  = [];
+let keyIndex     = 0;
+
+// Current phase within a single key's block
+// 'chord1' → play opening chord for 2 beats
+// 'pattern' → play pattern notes one per beat
+// 'chord2'  → replay chord for 2 beats, then advance key
+let phase       = 'chord1';
+let patternStep = 0;
+
+// Currently held notes (so we can stop them on the next tick)
+let heldNotes = [];
+
+let timerId = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+export function midiLabel(midi) {
+  return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+}
+
+/**
+ * Build the full ascending + descending arc of MIDI root notes.
+ * e.g. low=48, high=51 → [48,49,50,51,50,49,48]
+ */
+export function buildKeySequence(low, high) {
+  const seq = [];
+  for (let k = low; k <= high; k++) seq.push(k);
+  for (let k = high - 1; k >= low; k--) seq.push(k);
+  return seq;
+}
+
+/**
+ * The highest semitone offset above the root that is ever played for a given
+ * pattern, taking both the pattern notes and the opening/closing chord into
+ * account. Used to back-calculate the highest *root* from the user-selected
+ * highest *pitch*.
+ */
+export function maxPatternOffset(pk) {
+  return Math.max(...PATTERNS[pk]); // chord excluded — "To" is the highest sung note
+}
+
+/**
+ * Given the user's chosen highest-note MIDI value, return the highest root
+ * note such that no pitch in the block exceeds highestMidi.
+ * Clamped to lowestMidi so the sequence is never empty.
+ */
+export function highestRoot(pk, highestMidi, lowestMidi) {
+  return Math.max(lowestMidi, highestMidi - maxPatternOffset(pk));
+}
+
+export function getPatterns() { return PATTERNS; }
+
+// ── Sequencer ─────────────────────────────────────────────────────────────────
+function stopHeld() {
+  heldNotes.forEach(m => stopNote(m));
+  heldNotes = [];
+}
+
+function startNotes(midiArr) {
+  midiArr.forEach(m => playNote(m));
+  heldNotes = midiArr.slice();
+}
+
+function finish() {
+  stopHeld();
+  isPlaying = false;
+  isPaused  = false;
+  keyIndex  = 0;
+  phase     = 'chord1';
+  patternStep = 0;
+  updateTransportUI();
+}
+
+function tick() {
+  if (!isPlaying) return;
+
+  const beatMs = 60000 / bpm;
+  const root   = keySequence[keyIndex];
+
+  stopHeld();
+
+  if (phase === 'chord1') {
+    startNotes(CHORD_OFFSETS.map(o => root + o));
+    phase = 'pattern';
+    patternStep = 0;
+    timerId = setTimeout(tick, beatMs * 2);
+
+  } else if (phase === 'pattern') {
+    const offsets = PATTERNS[patternKey];
+    startNotes([root + offsets[patternStep]]);
+    patternStep++;
+    const isLastNote = patternStep >= offsets.length;
+    if (isLastNote) phase = 'chord2';
+    // Last pattern note holds for 2 beats; all others 1 beat
+    timerId = setTimeout(tick, isLastNote ? beatMs * 2 : beatMs);
+
+  } else { // chord2 — replay same-key chord for 1 beat before moving on
+    keyIndex++;
+    if (keyIndex >= keySequence.length) {
+      // Last key: skip the final chord and end immediately after the last note
+      finish();
+    } else {
+      startNotes(CHORD_OFFSETS.map(o => root + o));
+      phase = 'chord1';
+      patternStep = 0;
+      timerId = setTimeout(tick, beatMs);
+    }
+  }
+}
+
+// ── Transport ─────────────────────────────────────────────────────────────────
+function play() {
+  primeAudio();
+  if (isPaused) {
+    isPlaying = true;
+    isPaused  = false;
+    updateTransportUI();
+    tick();
+    return;
+  }
+  keySequence = buildKeySequence(lowestMidi, highestRoot(patternKey, highestMidi, lowestMidi));
+  keyIndex    = 0;
+  phase       = 'chord1';
+  patternStep = 0;
+  isPlaying   = true;
+  isPaused    = false;
+  updateTransportUI();
+  // Brief pre-roll so the audio context is fully awake before the first
+  // oscillators fire — prevents the click artifact on initial play.
+  timerId = setTimeout(tick, 80);
+}
+
+function pause() {
+  if (!isPlaying) return;
+  clearTimeout(timerId);
+  stopHeld();
+  isPlaying = false;
+  isPaused  = true;
+  updateTransportUI();
+}
+
+function restart() {
+  clearTimeout(timerId);
+  stopHeld();
+  const wasPlaying = isPlaying || isPaused;
+  isPlaying   = false;
+  isPaused    = false;
+  keyIndex    = 0;
+  phase       = 'chord1';
+  patternStep = 0;
+  if (wasPlaying) {
+    // Rebuild sequence in case note range changed between plays
+    keySequence = buildKeySequence(lowestMidi, highestRoot(patternKey, highestMidi, lowestMidi));
+    isPlaying   = true;
+    updateTransportUI();
+    tick();
+  } else {
+    updateTransportUI();
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+// Pause bars drawn as SVG with currentColor so they inherit the button's gold.
+const PAUSE_SVG = '<svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor" aria-hidden="true">'
+  + '<rect x="0" y="0" width="4" height="14" rx="1"/>'
+  + '<rect x="8" y="0" width="4" height="14" rx="1"/>'
+  + '</svg>';
+
+function updateTransportUI() {
+  const btn = document.getElementById('warmupPlayPause');
+  if (!btn) return;
+  if (isPlaying) {
+    btn.innerHTML = PAUSE_SVG;
+  } else {
+    btn.textContent = '▶';
+  }
+}
+
+function updateBpmDisplay() {
+  const el = document.getElementById('warmupBpmDisplay');
+  if (el) el.textContent = bpm + ' BPM';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+export function initWarmup() {
+  const voiceSel   = document.getElementById('warmupVoice');
+  const lowestSel  = document.getElementById('warmupLowest');
+  const highestSel = document.getElementById('warmupHighest');
+
+  // Populate note selectors
+  for (let m = WARMUP_LOW; m <= WARMUP_HIGH; m++) {
+    const lbl = midiLabel(m);
+    lowestSel.appendChild(new Option(lbl, m));
+    highestSel.appendChild(new Option(lbl, m));
+  }
+  lowestSel.value  = lowestMidi;
+  highestSel.value = highestMidi;
+  voiceSel.value   = voicePreset;
+
+  // Selecting a preset snaps both note pickers to the preset values
+  voiceSel.addEventListener('change', () => {
+    voicePreset = voiceSel.value;
+    const preset = VOICE_PRESETS[voicePreset];
+    if (preset) {
+      lowestMidi = preset.lowest;
+      highestMidi = preset.highest;
+      lowestSel.value  = lowestMidi;
+      highestSel.value = highestMidi;
+    }
+  });
+
+  // Manually tweaking either note picker switches to Custom
+  lowestSel.addEventListener('change', () => {
+    lowestMidi = +lowestSel.value;
+    voicePreset = 'custom';
+    voiceSel.value = 'custom';
+    if (lowestMidi >= highestMidi) {
+      highestMidi = lowestMidi + 1;
+      highestSel.value = highestMidi;
+    }
+  });
+  highestSel.addEventListener('change', () => {
+    highestMidi = +highestSel.value;
+    voicePreset = 'custom';
+    voiceSel.value = 'custom';
+    if (highestMidi <= lowestMidi) {
+      lowestMidi = highestMidi - 1;
+      lowestSel.value = lowestMidi;
+    }
+  });
+
+  // Pattern selector
+  const patternSel = document.getElementById('warmupPattern');
+  patternSel.value = patternKey;
+  patternSel.addEventListener('change', () => { patternKey = patternSel.value; });
+
+  // BPM controls
+  updateBpmDisplay();
+  document.getElementById('warmupBpmDown').addEventListener('click', () => {
+    bpm = Math.max(BPM_MIN, bpm - BPM_STEP);
+    updateBpmDisplay();
+  });
+  document.getElementById('warmupBpmUp').addEventListener('click', () => {
+    bpm = Math.min(BPM_MAX, bpm + BPM_STEP);
+    updateBpmDisplay();
+  });
+
+  // Transport
+  document.getElementById('warmupPlayPause').addEventListener('click', () => {
+    if (isPlaying) pause(); else play();
+  });
+  document.getElementById('warmupRestart').addEventListener('click', restart);
+}
+
+// ── Test helpers ──────────────────────────────────────────────────────────────
+export function getWarmupState() {
+  return { lowestMidi, highestMidi, voicePreset, patternKey, bpm, isPlaying, isPaused, keyIndex, phase, patternStep, keySequence: keySequence.slice(), heldNotes: heldNotes.slice() };
+}
+
+export function setWarmupState(overrides) {
+  if (overrides.lowestMidi  !== undefined) lowestMidi  = overrides.lowestMidi;
+  if (overrides.highestMidi !== undefined) highestMidi = overrides.highestMidi;
+  if (overrides.voicePreset !== undefined) voicePreset = overrides.voicePreset;
+  if (overrides.patternKey  !== undefined) patternKey  = overrides.patternKey;
+  if (overrides.bpm         !== undefined) bpm         = overrides.bpm;
+  if (overrides.isPlaying   !== undefined) isPlaying   = overrides.isPlaying;
+  if (overrides.isPaused    !== undefined) isPaused    = overrides.isPaused;
+  if (overrides.keyIndex    !== undefined) keyIndex    = overrides.keyIndex;
+  if (overrides.phase       !== undefined) phase       = overrides.phase;
+  if (overrides.patternStep !== undefined) patternStep = overrides.patternStep;
+  if (overrides.keySequence !== undefined) keySequence = overrides.keySequence;
+}
+
+export function resetWarmup() {
+  clearTimeout(timerId);
+  timerId     = null;
+  lowestMidi  = 45;
+  highestMidi = 69;
+  voicePreset = 'baritone';
+  patternKey  = 'arpeggio';
+  bpm         = 120;
+  isPlaying   = false;
+  isPaused    = false;
+  keySequence = [];
+  keyIndex    = 0;
+  phase       = 'chord1';
+  patternStep = 0;
+  heldNotes   = [];
+}
