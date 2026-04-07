@@ -94,7 +94,9 @@ export function enableQuarterTone() {
   enabled = true;
   buildQuarterToneLayer();
   document.getElementById('quarterToneLayer').style.display = 'block';
-  document.getElementById('qtToggle').classList.add('active');
+  const btn = document.getElementById('qtToggle');
+  btn.classList.add('active');
+  btn.setAttribute('aria-pressed', 'true');
 }
 
 export function disableQuarterTone() {
@@ -108,7 +110,9 @@ export function disableQuarterTone() {
   const layer = document.getElementById('quarterToneLayer');
   layer.style.display = 'none';
   layer.innerHTML = ''; // remove key nodes so keyAt() never gets false hits from display:none zero-rects
-  document.getElementById('qtToggle').classList.remove('active');
+  const btn = document.getElementById('qtToggle');
+  btn.classList.remove('active');
+  btn.setAttribute('aria-pressed', 'false');
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

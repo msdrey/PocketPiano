@@ -286,13 +286,13 @@ describe('CSS: quarter-tone toggle visibility', () => {
     css = readFileSync(resolve(__dirname, '../style.css'), 'utf8');
   });
 
-  it('.qt-toggle-btn is display:none by default', () => {
-    expect(css).toMatch(/\.qt-toggle-btn\s*\{[^}]*display:\s*none/);
+  it('.qt-toggle-wrapper is display:none by default (hidden in portrait)', () => {
+    expect(css).toMatch(/\.qt-toggle-wrapper\s*\{[^}]*display:\s*none/);
   });
 
-  it('.qt-toggle-btn is shown (display:flex) in landscape media query', () => {
+  it('.qt-toggle-wrapper is shown (display:flex) in landscape media query', () => {
     expect(css).toMatch(
-      /@media\s*\(orientation:\s*landscape\)[^{]*\{[^}]*\.qt-toggle-btn[^}]*display:\s*flex/s
+      /@media\s*\(orientation:\s*landscape\)[^{]*\{[^}]*\.qt-toggle-wrapper[^}]*display:\s*flex/s
     );
   });
 });
