@@ -6,13 +6,14 @@ import { resolve } from 'path';
 vi.mock('./audio.js', () => ({
   playNote: vi.fn(),
   stopNote: vi.fn(),
+  primeAudio: vi.fn(),
 }));
 
 vi.mock('./transpose.js', () => ({
   getTranspose: vi.fn(() => 0),
 }));
 
-import { playNote, stopNote } from './audio.js';
+import { playNote, stopNote, primeAudio } from './audio.js';
 import { getTranspose } from './transpose.js';
 import {
   isQuarterToneEnabled,
@@ -21,6 +22,7 @@ import {
   disableQuarterTone,
   pressQt,
   releaseQt,
+  initQuarterTone,
 } from './quartertone.js';
 
 // ── DOM setup ──────────────────────────────────────────────────────────────────
@@ -165,6 +167,11 @@ describe('disableQuarterTone', () => {
     disableQuarterTone();
     expect(stopNote).toHaveBeenCalledWith(60.5);
   });
+
+  it('clears key elements from the layer so hidden nodes cannot cause false keyAt hits', () => {
+    disableQuarterTone();
+    expect(document.getElementById('quarterToneLayer').children.length).toBe(0);
+  });
 });
 
 // ── pressQt / releaseQt ────────────────────────────────────────────────────────
@@ -254,6 +261,21 @@ describe('quarter-tone key center positions', () => {
     const el = document.querySelector('[data-midi="61.5"]');
     const left = parseFloat(el.style.left);
     expect(left).toBeCloseTo(729.25, 1);
+  });
+});
+
+// ── initQuarterTone: primeAudio called on toggle click ─────────────────────────
+describe('initQuarterTone toggle click', () => {
+  beforeEach(() => {
+    // jsdom doesn't implement matchMedia; stub it so initQuarterTone() can run
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener: vi.fn() }));
+  });
+
+  it('calls primeAudio when the toggle button is clicked', () => {
+    initQuarterTone();
+    vi.clearAllMocks();
+    document.getElementById('qtToggle').click();
+    expect(primeAudio).toHaveBeenCalled();
   });
 });
 

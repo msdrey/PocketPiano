@@ -1,5 +1,5 @@
 import { getTranspose } from './transpose.js';
-import { playNote, stopNote } from './audio.js';
+import { playNote, stopNote, primeAudio } from './audio.js';
 
 // ── Quarter-tone constants ─────────────────────────────────────────────────────
 const START = 36, END = 84, WHITE_W = 47;
@@ -105,7 +105,9 @@ export function disableQuarterTone() {
     document.querySelector(`[data-midi="${midi}"]`)?.classList.remove('pressed');
   }
   qtPressed.clear();
-  document.getElementById('quarterToneLayer').style.display = 'none';
+  const layer = document.getElementById('quarterToneLayer');
+  layer.style.display = 'none';
+  layer.innerHTML = ''; // remove key nodes so keyAt() never gets false hits from display:none zero-rects
   document.getElementById('qtToggle').classList.remove('active');
 }
 
@@ -113,6 +115,7 @@ export function disableQuarterTone() {
 export function initQuarterTone() {
   const btn = document.getElementById('qtToggle');
   btn.addEventListener('click', () => {
+    primeAudio(); // prime inside the click gesture so AudioContext is running before first key tap
     if (enabled) disableQuarterTone();
     else enableQuarterTone();
   });
