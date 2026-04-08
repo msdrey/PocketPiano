@@ -1,3 +1,5 @@
+import { MIDI_LOW, MIDI_HIGH } from './constants.js';
+
 // ── Audio context ──────────────────────────────────────────────────────────────
 let ctx = null;
 let primed = false;       // true after primeAudio() has run on this context
@@ -137,7 +139,7 @@ function scheduleNote(midi) {
   const now = ctx.currentTime + startDelay;
 
   // Decay time scales with pitch: low notes ring longer
-  const decayTime = Math.max(0.8, 3.5 - (midi - 36) / 48 * 2.5);
+  const decayTime = Math.max(0.8, 3.5 - (midi - MIDI_LOW) / (MIDI_HIGH - MIDI_LOW) * 2.5);
 
   const master = ctx.createGain();
   master.gain.setValueAtTime(0, now);

@@ -1,4 +1,5 @@
 import { playNote, stopNote, primeAudio } from './audio.js';
+import { MIDI_LOW, MIDI_HIGH } from './constants.js';
 
 // ── Patterns ──────────────────────────────────────────────────────────────────
 // Each array is semitone offsets from the root note (one note per beat)
@@ -11,8 +12,8 @@ const PATTERNS = {
 const CHORD_OFFSETS = [0, 4, 7]; // major triad: root, M3, P5
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const WARMUP_LOW  = 36; // C2 – lowest selectable note
-const WARMUP_HIGH = 84; // C6 – highest selectable note (covers soprano)
+const WARMUP_LOW  = MIDI_LOW;  // C2 – lowest selectable note
+const WARMUP_HIGH = MIDI_HIGH; // C6 – highest selectable note (covers soprano)
 
 const BPM_MIN = 40;
 const BPM_MAX = 160;

@@ -1,10 +1,11 @@
 import { playNote, stopNote, primeAudio } from './audio.js';
 import { getTranspose } from './transpose.js';
 import { pressQt, releaseQt } from './quartertone.js';
+import { MIDI_LOW, MIDI_HIGH, WHITE_KEY_WIDTH } from './constants.js';
 
 // ── Keyboard layout ────────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const START = 36, END = 84, WHITE_W = 47;
+const START = MIDI_LOW, END = MIDI_HIGH, WHITE_W = WHITE_KEY_WIDTH;
 
 export function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
 export function isBlack(m)  { return [1, 3, 6, 8, 10].includes(m % 12); }
