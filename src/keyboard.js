@@ -24,28 +24,6 @@ function isQuarterTone(midi) { return midi % 1 !== 0; }
 let whiteColMap = null;
 let blackColMap = null;
 let kbScrollEl  = null; // #keyboardScroll element
-let kbLeft      = 0;   // scrollEl viewport left, refreshed on resize
-let kbTop       = 0;   // scrollEl viewport top,  refreshed on resize
-let kbHeight    = Infinity; // scrollEl clientHeight; Infinity in jsdom (clientHeight=0)
-// y-distance (from kbTop) below which no black key exists.
-// Default 9999 acts as ∞ in jsdom (clientHeight is always 0), so every y value
-// is treated as within the black-key zone — correct for testing.
-let blackBottom = 9999;
-
-// Refresh cached viewport offsets after a window resize.
-// Registered once at module level so multiple buildKeyboard() calls (tests) don't
-// pile up duplicate listeners.
-if (typeof window !== 'undefined') {
-  window.addEventListener('resize', () => {
-    if (!kbScrollEl) return;
-    const r = kbScrollEl.getBoundingClientRect();
-    kbLeft = r.left;
-    kbTop  = r.top;
-    const kh = kbScrollEl.clientHeight;
-    kbHeight    = kh > 0 ? kh : Infinity;
-    blackBottom = kh > 0 ? Math.round(kh * 0.62) : 9999;
-  }, { passive: true });
-}
 
 function buildColMaps(whiteCount, wIdxMap) {
   kbScrollEl = document.getElementById('keyboardScroll');
@@ -76,14 +54,6 @@ function buildColMaps(whiteCount, wIdxMap) {
     }
   }
 
-  // #blackKeysLayer has height:62% in style.css; black keys fill 100% of that layer.
-  const kh = kbScrollEl.clientHeight;
-  kbHeight    = kh > 0 ? kh : Infinity;
-  blackBottom = kh > 0 ? Math.round(kh * 0.62) : 9999;
-
-  const r = kbScrollEl.getBoundingClientRect();
-  kbLeft = r.left;
-  kbTop  = r.top;
 }
 
 export function buildKeyboard() {
@@ -180,16 +150,22 @@ function keyAt(x, y) {
 
   if (!whiteColMap) return null;
 
-  // Reject clicks outside the keyboard's vertical bounds (e.g. menu controls above).
-  const yRel = y - kbTop;
-  if (yRel < 0 || yRel > kbHeight) return null;
+  // Read the keyboard element's current position live so the result is always
+  // correct regardless of page scroll, layout timing, or orientation change.
+  // This is one getBoundingClientRect() call per event — still O(1), just not cached.
+  const kr  = kbScrollEl.getBoundingClientRect();
+  // kbH is Infinity when kr.height=0 (jsdom, layout not yet run) so all y values pass.
+  const kbH = kr.height > 0 ? kr.height : Infinity;
+  const yRel = y - kr.top;
+  // Reject clicks outside the keyboard's vertical bounds (e.g. controls above the keys).
+  if (yRel < 0 || yRel > kbH) return null;
 
   // Convert viewport x → keyboard-content x, accounting for horizontal scroll.
-  const xRel = Math.round(x - kbLeft + kbScrollEl.scrollLeft);
+  const xRel = Math.round(x - kr.left + kbScrollEl.scrollLeft);
   if (xRel < 0 || xRel >= whiteColMap.length) return null;
 
   // Black keys occupy the top 62 % of the keyboard (#blackKeysLayer height: 62%).
-  if (yRel < blackBottom && blackColMap[xRel]) return blackColMap[xRel];
+  if (yRel < kbH * 0.62 && blackColMap[xRel]) return blackColMap[xRel];
 
   return whiteColMap[xRel] || null;
 }
