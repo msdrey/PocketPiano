@@ -26,6 +26,7 @@ let blackColMap = null;
 let kbScrollEl  = null; // #keyboardScroll element
 let kbLeft      = 0;   // scrollEl viewport left, refreshed on resize
 let kbTop       = 0;   // scrollEl viewport top,  refreshed on resize
+let kbHeight    = Infinity; // scrollEl clientHeight; Infinity in jsdom (clientHeight=0)
 // y-distance (from kbTop) below which no black key exists.
 // Default 9999 acts as ∞ in jsdom (clientHeight is always 0), so every y value
 // is treated as within the black-key zone — correct for testing.
@@ -41,6 +42,7 @@ if (typeof window !== 'undefined') {
     kbLeft = r.left;
     kbTop  = r.top;
     const kh = kbScrollEl.clientHeight;
+    kbHeight    = kh > 0 ? kh : Infinity;
     blackBottom = kh > 0 ? Math.round(kh * 0.62) : 9999;
   }, { passive: true });
 }
@@ -76,6 +78,7 @@ function buildColMaps(whiteCount, wIdxMap) {
 
   // #blackKeysLayer has height:62% in style.css; black keys fill 100% of that layer.
   const kh = kbScrollEl.clientHeight;
+  kbHeight    = kh > 0 ? kh : Infinity;
   blackBottom = kh > 0 ? Math.round(kh * 0.62) : 9999;
 
   const r = kbScrollEl.getBoundingClientRect();
@@ -177,12 +180,16 @@ function keyAt(x, y) {
 
   if (!whiteColMap) return null;
 
+  // Reject clicks outside the keyboard's vertical bounds (e.g. menu controls above).
+  const yRel = y - kbTop;
+  if (yRel < 0 || yRel > kbHeight) return null;
+
   // Convert viewport x → keyboard-content x, accounting for horizontal scroll.
   const xRel = Math.round(x - kbLeft + kbScrollEl.scrollLeft);
   if (xRel < 0 || xRel >= whiteColMap.length) return null;
 
   // Black keys occupy the top 62 % of the keyboard (#blackKeysLayer height: 62%).
-  if (y - kbTop < blackBottom && blackColMap[xRel]) return blackColMap[xRel];
+  if (yRel < blackBottom && blackColMap[xRel]) return blackColMap[xRel];
 
   return whiteColMap[xRel] || null;
 }
