@@ -44,6 +44,7 @@ function getContext() {
 export function primeAudio() {
   const c = getContext();
   if (!c) return;
+  tryDecodeQueued(); // decode any samples fetched before AudioContext existed
   if (c.state === 'suspended') {
     c.resume().then(() => {
       if (pendingMidi !== null) {
@@ -71,6 +72,75 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// ── Sample playback ────────────────────────────────────────────────────────────
+const SAMPLE_BASE = 'https://tonejs.github.io/audio/salamander/';
+
+// Salamander notes sampled within our keyboard range (C2=36 to C6=84)
+export const SAMPLE_MIDI_NOTES = [36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 78, 81, 84];
+
+const SAMPLE_FILE_NAMES = {
+  36: 'C2',  39: 'Ds2', 42: 'Fs2', 45: 'A2',
+  48: 'C3',  51: 'Ds3', 54: 'Fs3', 57: 'A3',
+  60: 'C4',  63: 'Ds4', 66: 'Fs4', 69: 'A4',
+  72: 'C5',  75: 'Ds5', 78: 'Fs5', 81: 'A5',
+  84: 'C6',
+};
+
+const arrayBufferQueue = {}; // midi → ArrayBuffer: fetched but waiting for AudioContext to exist
+const sampleBuffers = {};    // midi → AudioBuffer: decoded and ready to play
+let samplesStarted = false;
+
+// Returns the nearest sampled MIDI note number for any given pitch.
+export function nearestSampledNote(midi) {
+  return SAMPLE_MIDI_NOTES.reduce((best, note) =>
+    Math.abs(note - midi) < Math.abs(best - midi) ? note : best
+  );
+}
+
+// Decode any array buffers that arrived before the AudioContext was created.
+// Called from primeAudio() on the first user gesture.
+function tryDecodeQueued() {
+  const c = getContext();
+  if (!c || typeof c.decodeAudioData !== 'function') return;
+  for (const [midiStr, arrayBuf] of Object.entries(arrayBufferQueue)) {
+    const midi = Number(midiStr);
+    delete arrayBufferQueue[midi];
+    c.decodeAudioData(arrayBuf.slice(0))
+      .then(decoded => { sampleBuffers[midi] = decoded; })
+      .catch(() => {});
+  }
+}
+
+// Begin fetching all Salamander Grand Piano sample files in the background.
+// Can be called at any time (even before the first user gesture); decoding is
+// deferred until an AudioContext exists.  Idempotent — safe to call many times.
+export function loadSamples() {
+  if (samplesStarted) return;
+  samplesStarted = true;
+
+  for (const [midiStr, name] of Object.entries(SAMPLE_FILE_NAMES)) {
+    const midi = Number(midiStr);
+    fetch(`${SAMPLE_BASE}${name}.mp3`)
+      .then(r => r.arrayBuffer())
+      .then(arrayBuf => {
+        const c = getContext();
+        if (c && typeof c.decodeAudioData === 'function') {
+          return c.decodeAudioData(arrayBuf.slice(0))
+            .then(decoded => { sampleBuffers[midi] = decoded; });
+        } else {
+          // AudioContext not yet created — queue for decoding on next primeAudio()
+          arrayBufferQueue[midi] = arrayBuf;
+        }
+      })
+      .catch(() => {}); // silent fail → synth fallback remains
+  }
+}
+
+// For testing: inject a pre-decoded buffer directly (bypasses fetch/decode).
+export function setSampleBuffer(midi, buffer) {
+  sampleBuffers[midi] = buffer;
+}
+
 // ── Synthesis (additive sine harmonics) ───────────────────────────────────────
 const activeNodes = {};
 const fadingNodes = {}; // nodes in release fade, still need killing on retrigger
@@ -82,9 +152,11 @@ export function midiToFreq(m) {
 // setContext resets all per-context state so tests start from a clean slate
 export function setContext(audioCtx) {
   ctx = audioCtx; masterGain = null; primed = false; contextReady = false;
-  pendingMidi = null;
+  pendingMidi = null; samplesStarted = false;
   for (const k of Object.keys(activeNodes)) delete activeNodes[k];
   for (const k of Object.keys(fadingNodes)) delete fadingNodes[k];
+  for (const k of Object.keys(sampleBuffers)) delete sampleBuffers[k];
+  for (const k of Object.keys(arrayBufferQueue)) delete arrayBufferQueue[k];
 }
 
 // Harmonic series: [multiplier, relative amplitude]
@@ -103,7 +175,7 @@ const HARMONICS = [
 function killNodes(midi) {
   for (const map of [activeNodes, fadingNodes]) {
     if (!map[midi]) continue;
-    const { oscs, master } = map[midi];
+    const { oscs, source, master } = map[midi];
     const t = ctx.currentTime;
     // Hold the current interpolated value before ramping down — prevents click on retrigger
     if (master.gain.cancelAndHoldAtTime) {
@@ -113,12 +185,13 @@ function killNodes(midi) {
       master.gain.setValueAtTime(master.gain.value, t);
     }
     master.gain.linearRampToValueAtTime(0, t + 0.008);
-    oscs.forEach(o => { try { o.stop(t + 0.012); } catch (e) {} });
+    if (oscs) oscs.forEach(o => { try { o.stop(t + 0.012); } catch (e) {} });
+    if (source) { try { source.stop(t + 0.012); } catch (e) {} }
     delete map[midi];
   }
 }
 
-function scheduleNote(midi) {
+function scheduleOscNote(midi) {
   killNodes(midi);
 
   // Lazily create the master gain node (once per context lifetime)
@@ -163,6 +236,51 @@ function scheduleNote(midi) {
   activeNodes[midi] = { oscs, master };
 }
 
+function scheduleSampleNote(midi) {
+  killNodes(midi);
+
+  if (!masterGain) {
+    masterGain = ctx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(ctx.destination);
+  }
+
+  const startDelay = contextReady ? 0 : 0.05;
+  contextReady = true;
+
+  const now = ctx.currentTime + startDelay;
+  const decayTime = Math.max(0.8, 3.5 - (midi - MIDI_LOW) / (MIDI_HIGH - MIDI_LOW) * 2.5);
+
+  const nearest = nearestSampledNote(midi);
+  const buffer = sampleBuffers[nearest];
+  const playbackRate = Math.pow(2, (midi - nearest) / 12);
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.28, now + 0.006);
+  master.gain.exponentialRampToValueAtTime(0.14, now + 0.1);
+  master.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.playbackRate.value = playbackRate;
+  source.connect(master);
+  source.start(now);
+
+  master.connect(masterGain);
+  activeNodes[midi] = { source, master };
+}
+
+// Dispatch to sample or synth path based on whether the nearest sample is loaded.
+function scheduleNote(midi) {
+  const nearest = nearestSampledNote(midi);
+  if (sampleBuffers[nearest] !== undefined) {
+    scheduleSampleNote(midi);
+  } else {
+    scheduleOscNote(midi);
+  }
+}
+
 export function playNote(midi) {
   const c = getContext();
   if (!c) return;
@@ -178,7 +296,7 @@ export function playNote(midi) {
 
 export function stopNote(midi) {
   if (!activeNodes[midi]) return;
-  const { oscs, master } = activeNodes[midi];
+  const { oscs, source, master } = activeNodes[midi];
   // Check before deleting: if 4 or more notes are currently sounding (active or
   // fading), use a short release to prevent oscillator pile-up from fast slides.
   // A threshold of 4 lets normal human-speed playing always get the full 300ms
@@ -195,9 +313,10 @@ export function stopNote(midi) {
   }
   const releaseTime = otherNotesPlaying ? 0.03 : 0.3;
   master.gain.linearRampToValueAtTime(0, now + releaseTime);
-  fadingNodes[midi] = { oscs, master };
+  fadingNodes[midi] = { oscs, source, master };
   setTimeout(() => {
-    oscs.forEach(o => { try { o.stop(); } catch (e) {} });
+    if (oscs) oscs.forEach(o => { try { o.stop(); } catch (e) {} });
+    if (source) { try { source.stop(); } catch (e) {} }
     delete fadingNodes[midi];
   }, (releaseTime + 0.1) * 1000);
 }

@@ -93,7 +93,9 @@
   import { initVolumeControl } from './src/volume.js';
   import { initWarmup } from './src/warmup.js';
   import { initQuarterTone } from './src/quartertone.js';
+  import { loadSamples } from './src/audio.js';
 
+  loadSamples(); // begin fetching Salamander samples in the background
   buildKeyboard();
   initTransposeControls();
   initVolumeControl();
