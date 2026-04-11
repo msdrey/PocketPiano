@@ -1,8 +1,9 @@
 import { getTranspose } from './transpose.js';
 import { playNote, stopNote, primeAudio } from './audio.js';
+import { MIDI_LOW, MIDI_HIGH, WHITE_KEY_WIDTH } from './constants.js';
 
 // ── Quarter-tone constants ─────────────────────────────────────────────────────
-const START = 36, END = 84, WHITE_W = 47;
+const START = MIDI_LOW, END = MIDI_HIGH, WHITE_W = WHITE_KEY_WIDTH;
 const BLACK_MODS = new Set([1, 3, 6, 8, 10]);
 
 let enabled = false;
