@@ -236,24 +236,25 @@ describe('releaseQt', () => {
 // ── Quarter-tone key positioning ───────────────────────────────────────────────
 describe('quarter-tone key center positions', () => {
   const WHITE_W = 47;
+  // Centres derived from keyboard geometry (12px left margin, white key index from C2=0)
+  const C4_CENTER  = 12 + 14 * WHITE_W + WHITE_W / 2; // 693.5  (white key index 14)
+  const Cs4_CENTER = 12 + 14 * WHITE_W + WHITE_W + 1;  // 718    (black key, li=14)
+  const D4_CENTER  = 12 + 15 * WHITE_W + WHITE_W / 2;  // 740.5  (white key index 15)
 
   beforeEach(() => { buildQuarterToneLayer(); });
 
-  // C4 (MIDI 60) white key center: 12 + 14*47 + 23.5 = 693.5
-  // C#4 (MIDI 61) black key center: 12 + 14*47 + 47 + 1 = 718
-  // Quarter-tone 60.5 should sit midway: (693.5 + 718) / 2 = 705.75
+  // Quarter-tone 60.5 should sit midway between C4 and C#4
   it('C4-quarter-sharp (60.5) is centered between C4 and C#4', () => {
     const el = document.querySelector('[data-midi="60.5"]');
     const left = parseFloat(el.style.left);
-    expect(left).toBeCloseTo(705.75, 1);
+    expect(left).toBeCloseTo((C4_CENTER + Cs4_CENTER) / 2, 1); // 705.75
   });
 
-  // C#4 (61) center = 718, D4 (62) white index 15 center: 12 + 15*47 + 23.5 = 740.5
-  // Quarter-tone 61.5 midway: (718 + 740.5) / 2 = 729.25
+  // Quarter-tone 61.5 should sit midway between C#4 and D4
   it('C#4-quarter-sharp (61.5) is centered between C#4 and D4', () => {
     const el = document.querySelector('[data-midi="61.5"]');
     const left = parseFloat(el.style.left);
-    expect(left).toBeCloseTo(729.25, 1);
+    expect(left).toBeCloseTo((Cs4_CENTER + D4_CENTER) / 2, 1); // 729.25
   });
 });
 
