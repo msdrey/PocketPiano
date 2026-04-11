@@ -6,55 +6,12 @@ import { MIDI_LOW, MIDI_HIGH, WHITE_KEY_WIDTH } from './constants.js';
 // ── Keyboard layout ────────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const START = MIDI_LOW, END = MIDI_HIGH, WHITE_W = WHITE_KEY_WIDTH;
-const BLACK_KEY_W = 31; // px — must match .key-black { width } in style.css
 
 export function noteName(m) { return NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1); }
 export function isBlack(m)  { return [1, 3, 6, 8, 10].includes(m % 12); }
 
 // Returns true if the MIDI value belongs to a quarter-tone key (fractional)
 function isQuarterTone(midi) { return midi % 1 !== 0; }
-
-// ── Column hit-test maps ───────────────────────────────────────────────────────
-// Built once in buildKeyboard(). keyAt() resolves white/black key hits in O(1)
-// by indexing into typed arrays instead of walking the DOM on every event.
-//
-// Both maps are indexed by x-pixel relative to the keyboard scroll-content origin.
-// whiteColMap[x] = MIDI of the white key whose column includes x (or 0 = none).
-// blackColMap[x] = MIDI of the black key whose column includes x (or 0 = none).
-let whiteColMap = null;
-let blackColMap = null;
-let kbScrollEl  = null; // #keyboardScroll element
-
-function buildColMaps(whiteCount, wIdxMap) {
-  kbScrollEl = document.getElementById('keyboardScroll');
-  const totalW = whiteCount * WHITE_W + 24; // matches buildKeyboard width calculation
-
-  whiteColMap = new Int16Array(totalW);
-  blackColMap = new Int16Array(totalW);
-
-  // White keys: key at index i spans [12 + i*WHITE_W, 12 + (i+1)*WHITE_W)
-  let wIdx = 0;
-  for (let m = START; m <= END; m++) {
-    if (isBlack(m)) continue;
-    const xL = 12 + wIdx * WHITE_W;
-    for (let x = xL; x < xL + WHITE_W && x < totalW; x++) whiteColMap[x] = m;
-    wIdx++;
-  }
-
-  // Black keys: CSS positions them with left = (12 + li*WHITE_W + WHITE_W + 1) and
-  // transform:translateX(-50%), so the key is centred at that x value.
-  const half = Math.floor(BLACK_KEY_W / 2);
-  for (let m = START; m <= END; m++) {
-    if (!isBlack(m)) continue;
-    const li = wIdxMap[m - 1];
-    if (li === undefined) continue;
-    const cx = 12 + li * WHITE_W + WHITE_W + 1;
-    for (let x = Math.max(0, cx - half); x <= Math.min(totalW - 1, cx + half); x++) {
-      blackColMap[x] = m;
-    }
-  }
-
-}
 
 export function buildKeyboard() {
   const keyboard  = document.getElementById('keyboard');
@@ -110,8 +67,6 @@ export function buildKeyboard() {
     scrollEl.scrollLeft = (slider.value / 1000) * max;
   });
   requestAnimationFrame(syncSlider);
-
-  buildColMaps(whiteCount, midiToWIdx);
 }
 
 // ── Press / release ────────────────────────────────────────────────────────────
@@ -137,37 +92,20 @@ function release(midi) {
   document.querySelector(`[data-midi="${midi}"]`)?.classList.remove('pressed');
 }
 
-// ── keyAt — O(1) coordinate → MIDI lookup ─────────────────────────────────────
-// Quarter-tone keys remain DOM-based (their layer is rebuilt on every toggle).
-// White and black keys use the pre-computed column maps built in buildColMaps().
-//
-// x, y are viewport coordinates (clientX / clientY).
 function keyAt(x, y) {
   for (const el of document.querySelectorAll('.key-qt')) {
     const r = el.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
   }
-
-  if (!whiteColMap) return null;
-
-  // Read the keyboard element's current position live so the result is always
-  // correct regardless of page scroll, layout timing, or orientation change.
-  // This is one getBoundingClientRect() call per event — still O(1), just not cached.
-  const kr  = kbScrollEl.getBoundingClientRect();
-  // kbH is Infinity when kr.height=0 (jsdom, layout not yet run) so all y values pass.
-  const kbH = kr.height > 0 ? kr.height : Infinity;
-  const yRel = y - kr.top;
-  // Reject clicks outside the keyboard's vertical bounds (e.g. controls above the keys).
-  if (yRel < 0 || yRel > kbH) return null;
-
-  // Convert viewport x → keyboard-content x, accounting for horizontal scroll.
-  const xRel = Math.round(x - kr.left + kbScrollEl.scrollLeft);
-  if (xRel < 0 || xRel >= whiteColMap.length) return null;
-
-  // Black keys occupy the top 62 % of the keyboard (#blackKeysLayer height: 62%).
-  if (yRel < kbH * 0.62 && blackColMap[xRel]) return blackColMap[xRel];
-
-  return whiteColMap[xRel] || null;
+  for (const el of document.querySelectorAll('.key-black')) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
+  }
+  for (const el of document.querySelectorAll('.key-white')) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return +el.dataset.midi;
+  }
+  return null;
 }
 
 // ── Touch events ───────────────────────────────────────────────────────────────
