@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { midiToFreq, setContext, playNote, stopNote, primeAudio, setVolume, getVolume } from './audio.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  midiToFreq, setContext, playNote, stopNote, primeAudio, setVolume, getVolume,
+  nearestSampledNote, setSampleBuffer, loadSamples, SAMPLE_MIDI_NOTES,
+} from './audio.js';
 
 // ── Web Audio API mock ─────────────────────────────────────────────────────────
 function makeGainNode() {
@@ -37,7 +40,14 @@ function makeMockCtx({ state = 'running', currentTime = 0 } = {}) {
     createGain: vi.fn(makeGainNode),
     createOscillator: vi.fn(makeOscillator),
     createBuffer: vi.fn(() => ({ getChannelData: vi.fn(() => new Float32Array(1)) })),
-    createBufferSource: vi.fn(() => ({ buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() })),
+    createBufferSource: vi.fn(() => ({
+      buffer: null,
+      playbackRate: { value: 1 },
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+    })),
+    decodeAudioData: vi.fn(() => Promise.resolve({})),
     resume: vi.fn(() => Promise.resolve()),
   };
 }
@@ -322,5 +332,180 @@ describe('stopNote', () => {
     const master60 = mockCtx.createGain.mock.results[1].value;
     const releaseCall = master60.gain.linearRampToValueAtTime.mock.calls.find(c => c[0] === 0);
     expect(releaseCall[1]).toBeCloseTo(0 + 0.03, 5);
+  });
+});
+
+// ── nearestSampledNote ─────────────────────────────────────────────────────────
+describe('nearestSampledNote', () => {
+  it('returns the note itself when it is a sampled note', () => {
+    expect(nearestSampledNote(60)).toBe(60); // C4 is sampled
+    expect(nearestSampledNote(36)).toBe(36); // C2 (lowest in range) is sampled
+    expect(nearestSampledNote(84)).toBe(84); // C6 (highest in range) is sampled
+  });
+
+  it('returns the closest sampled note for in-between pitches', () => {
+    expect(nearestSampledNote(61)).toBe(60); // C#4: 1 below C4, 2 below Ds4
+    expect(nearestSampledNote(62)).toBe(63); // D4: 2 above C4, 1 below Ds4
+    expect(nearestSampledNote(37)).toBe(36); // C#2: closer to C2
+    expect(nearestSampledNote(38)).toBe(39); // D2: closer to Ds2
+  });
+
+  it('covers all notes in SAMPLE_MIDI_NOTES', () => {
+    for (const note of SAMPLE_MIDI_NOTES) {
+      expect(nearestSampledNote(note)).toBe(note);
+    }
+  });
+});
+
+// ── loadSamples ───────────────────────────────────────────────────────────────
+describe('loadSamples', () => {
+  let mockCtx;
+  let mockFetch;
+
+  beforeEach(() => {
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+    mockFetch = vi.fn().mockRejectedValue(new Error('offline'));
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('fetches one file per sampled note (17 notes in C2–C6)', () => {
+    loadSamples();
+    expect(mockFetch).toHaveBeenCalledTimes(SAMPLE_MIDI_NOTES.length);
+  });
+
+  it('fetches from the Salamander CDN with .mp3 extension', () => {
+    loadSamples();
+    const urls = mockFetch.mock.calls.map(c => c[0]);
+    expect(urls.every(u => u.includes('salamander') && u.endsWith('.mp3'))).toBe(true);
+  });
+
+  it('is idempotent — fetches only once even if called multiple times', () => {
+    loadSamples();
+    loadSamples();
+    expect(mockFetch).toHaveBeenCalledTimes(SAMPLE_MIDI_NOTES.length);
+  });
+
+  it('decodes fetched buffers into the AudioContext when available', async () => {
+    const fakeArrayBuf = new ArrayBuffer(8);
+    mockFetch = vi.fn().mockResolvedValue({ arrayBuffer: vi.fn().mockResolvedValue(fakeArrayBuf) });
+    vi.stubGlobal('fetch', mockFetch);
+
+    loadSamples();
+    await new Promise(r => setTimeout(r, 0)); // flush fetch + arrayBuffer + decodeAudioData microtasks
+
+    expect(mockCtx.decodeAudioData).toHaveBeenCalled();
+  });
+
+  it('silently ignores fetch failures without throwing', async () => {
+    loadSamples();
+    await new Promise(r => setTimeout(r, 0));
+    // No assertion: verifies no unhandled rejection propagates
+  });
+});
+
+// ── playNote with samples ──────────────────────────────────────────────────────
+describe('playNote with samples', () => {
+  let mockCtx;
+
+  beforeEach(() => {
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+    vi.clearAllMocks();
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+  });
+
+  it('uses a BufferSource (not oscillators) when the nearest sample is loaded', () => {
+    setSampleBuffer(60, {}); // inject decoded buffer for C4
+    playNote(60);
+    expect(mockCtx.createOscillator).not.toHaveBeenCalled();
+    expect(mockCtx.createBufferSource).toHaveBeenCalledOnce();
+  });
+
+  it('uses the nearest sample buffer for non-sampled pitches', () => {
+    const mockBuffer = {};
+    setSampleBuffer(60, mockBuffer); // C4 (midi 60) covers neighbours
+    playNote(61);                    // C#4 → nearest sampled is C4
+    const src = mockCtx.createBufferSource.mock.results[0].value;
+    expect(src.buffer).toBe(mockBuffer);
+  });
+
+  it('sets playback rate to pitch-shift from the sampled note to the target', () => {
+    setSampleBuffer(60, {});
+    playNote(61); // C#4 is 1 semitone above C4
+    const src = mockCtx.createBufferSource.mock.results[0].value;
+    expect(src.playbackRate.value).toBeCloseTo(Math.pow(2, 1 / 12), 4);
+  });
+
+  it('sets playback rate of 1.0 when playing an exactly sampled note', () => {
+    setSampleBuffer(60, {});
+    playNote(60);
+    const src = mockCtx.createBufferSource.mock.results[0].value;
+    expect(src.playbackRate.value).toBeCloseTo(1.0, 6);
+  });
+
+  it('falls back to oscillators when no sample is loaded', () => {
+    // No setSampleBuffer — sampleBuffers is empty
+    playNote(60);
+    expect(mockCtx.createOscillator).toHaveBeenCalledTimes(8);
+    expect(mockCtx.createBufferSource).not.toHaveBeenCalled();
+  });
+
+  it('applies the same ADSR gain envelope to sample notes as to synth notes', () => {
+    setSampleBuffer(60, {});
+    playNote(60);
+    // results[0] = masterGain (dest), results[1] = note master
+    const master = mockCtx.createGain.mock.results[1].value;
+    expect(master.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(master.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.28, expect.any(Number));
+  });
+
+  it('stops the buffer source when the same note is retriggered', () => {
+    setSampleBuffer(60, {});
+    playNote(60);
+    const firstSrc = mockCtx.createBufferSource.mock.results[0].value;
+    playNote(60); // retrigger — killNodes should stop the first source
+    expect(firstSrc.stop).toHaveBeenCalled();
+  });
+});
+
+// ── stopNote with sample nodes ─────────────────────────────────────────────────
+describe('stopNote with sample nodes', () => {
+  let mockCtx;
+
+  beforeEach(() => {
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+    vi.clearAllMocks();
+    mockCtx = makeMockCtx();
+    setContext(mockCtx);
+  });
+
+  it('fades master gain to zero on release of a sample note', () => {
+    setSampleBuffer(60, {});
+    playNote(60);
+    const master = mockCtx.createGain.mock.results[1].value;
+    stopNote(60);
+    expect(master.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+  });
+
+  it('stops the buffer source after the release fade', async () => {
+    vi.useFakeTimers();
+    setSampleBuffer(60, {});
+    playNote(60);
+    const src = mockCtx.createBufferSource.mock.results[0].value;
+    stopNote(60);
+    vi.runAllTimers();
+    expect(src.stop).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('does nothing for a sample note that was never played', () => {
+    expect(() => stopNote(99)).not.toThrow();
   });
 });
