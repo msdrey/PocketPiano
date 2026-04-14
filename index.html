@@ -9,8 +9,8 @@
   <title>Piano</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Courier+Prime&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
 </head>
 <body>
 
@@ -102,7 +102,7 @@
   initWarmup();
   initQuarterTone();
 
-  fetch('/pr.json')
+  fetch('./pr.json')
     .then(r => r.json())
     .then(({ pr }) => { if (pr) document.getElementById('prBadge').textContent = '#' + pr; })
     .catch(() => {});
@@ -110,7 +110,7 @@
   if ('serviceWorker' in navigator) {
     // updateViaCache:'none' ensures the SW script is always fetched from the network,
     // never from the browser's HTTP cache, so new deploys are detected immediately.
-    navigator.serviceWorker.register('/serviceWorker.js', { type: 'module', updateViaCache: 'none' })
+    navigator.serviceWorker.register('./serviceWorker.js', { type: 'module', updateViaCache: 'none' })
       .then(reg => reg.update()); // proactively check for an updated SW on every page load
 
     // When a new SW takes control (skipWaiting + clients.claim), reload so the page
