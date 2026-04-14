@@ -2,15 +2,15 @@
 export const CACHE = 'pocketpiano-v1';
 
 export const ASSETS = [
-  '/',
-  '/style.css',
-  '/src/audio.js',
-  '/src/keyboard.js',
-  '/src/warmup.js',
-  '/manifest.json',
-  '/icon.png',
-  '/icon.svg',
-  '/pr.json',
+  './',
+  './style.css',
+  './src/audio.js',
+  './src/keyboard.js',
+  './src/warmup.js',
+  './manifest.json',
+  './icon.png',
+  './icon.svg',
+  './pr.json',
 ];
 
 // ── Network-first strategy ────────────────────────────────────────────────────

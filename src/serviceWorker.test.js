@@ -8,11 +8,11 @@ describe('CACHE config', () => {
   });
 
   it('includes key app assets', () => {
-    expect(ASSETS).toContain('/');
-    expect(ASSETS).toContain('/src/audio.js');
-    expect(ASSETS).toContain('/src/keyboard.js');
-    expect(ASSETS).toContain('/manifest.json');
-    expect(ASSETS).toContain('/icon.png');
+    expect(ASSETS).toContain('./');
+    expect(ASSETS).toContain('./src/audio.js');
+    expect(ASSETS).toContain('./src/keyboard.js');
+    expect(ASSETS).toContain('./manifest.json');
+    expect(ASSETS).toContain('./icon.png');
   });
 });
 
